@@ -144,6 +144,67 @@ Document binary WebSocket messages (Arrow IPC, Protobuf, MessagePack):
 pub struct BinaryData;
 ```
 
+## Generating Specification Files
+
+### Standalone Binary (Recommended)
+
+Create a separate binary in your project to generate AsyncAPI specs:
+
+```rust
+// bin/generate-asyncapi.rs
+use my_project::MyApi;
+use asyncapi_rust::AsyncApi;
+
+fn main() {
+    let spec = MyApi::asyncapi_spec();
+    let json = serde_json::to_string_pretty(&spec)
+        .expect("Failed to serialize spec");
+
+    std::fs::write("docs/asyncapi.json", json)
+        .expect("Failed to write spec file");
+
+    println!("✅ Generated docs/asyncapi.json");
+}
+```
+
+Run with:
+```bash
+cargo run --bin generate-asyncapi
+```
+
+**Benefits:**
+- Simple to implement and use
+- Works with any build system
+- Can commit generated spec to git for CI/CD
+- Easy to integrate into workflows
+
+### Including in Rustdoc
+
+You can include the generated spec in your crate's documentation:
+
+```rust
+#[doc = include_str!("../docs/asyncapi.json")]
+#[derive(AsyncApi)]
+#[asyncapi(title = "My API", version = "1.0.0")]
+struct MyApi;
+```
+
+This embeds the AsyncAPI specification directly in your rustdoc output, making it accessible alongside your Rust API documentation.
+
+**Workflow:**
+1. Generate the spec file: `cargo run --bin generate-asyncapi`
+2. Build docs: `cargo doc`
+3. The AsyncAPI spec will be visible in the rustdoc for `MyApi`
+
+### Future: Cargo Plugin
+
+A `cargo-asyncapi` plugin for automatic spec generation is planned for a future release. This would allow:
+
+```bash
+cargo asyncapi generate
+cargo asyncapi serve  # Start AsyncAPI UI viewer
+```
+
 ## Examples
 
 - [Basic Chat](examples/basic-chat/) - Simple text-only WebSocket
@@ -166,6 +227,7 @@ pub struct BinaryData;
 - [x] Binary message support
 - [ ] Embedded AsyncAPI UI
 - [ ] Additional framework support (tonic/gRPC, Rocket, Warp)
+- [ ] Cargo plugin (`cargo-asyncapi`) for automated spec generation
 
 ## Contributing
 

@@ -4,7 +4,6 @@
 //! basic AsyncAPI specifications with the Info section pre-filled.
 
 use asyncapi_rust::{AsyncApi, AsyncApiSpec};
-use serde_json;
 
 /// Chat WebSocket API specification
 ///
