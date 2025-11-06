@@ -207,10 +207,22 @@ cargo asyncapi serve  # Start AsyncAPI UI viewer
 
 ## Examples
 
-- [Basic Chat](examples/basic-chat/) - Simple text-only WebSocket
-- [Binary Streaming](examples/binary-streaming/) - Mixed text/binary protocol
-- [actix-web Integration](examples/actix-integration/) - Full actix-ws integration
-- [axum Integration](examples/axum-integration/) - Full axum integration
+The `examples/` directory contains working demonstrations:
+
+- **`simple.rs`** - Basic message types with schema generation
+- **`chat_api.rs`** - Complete AsyncAPI 3.0 specification
+- **`asyncapi_derive.rs`** - Using `#[derive(AsyncApi)]` for specs
+- **`generate_spec_file.rs`** - Generating specification files
+- **`full_asyncapi_derive.rs`** - Complete spec with servers, channels, operations
+- **`actix_websocket.rs`** - Real-world actix-web + actix-ws integration
+- **`axum_websocket.rs`** - Real-world axum WebSocket integration
+- **`framework_integration_guide.rs`** - Comprehensive framework integration guide
+
+Run any example:
+```bash
+cargo run --example actix_websocket
+cargo run --example axum_websocket
+```
 
 ## Documentation
 
