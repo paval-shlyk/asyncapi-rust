@@ -8,7 +8,11 @@
 
 use proc_macro::TokenStream;
 use quote::quote;
-use syn::{DeriveInput, parse_macro_input};
+use syn::{Data, DeriveInput, parse_macro_input};
+
+mod serde_attrs;
+
+use serde_attrs::{extract_serde_rename, extract_serde_tag};
 
 /// Derive macro for generating AsyncAPI message metadata
 ///
@@ -19,9 +23,10 @@ use syn::{DeriveInput, parse_macro_input};
 /// use serde::{Deserialize, Serialize};
 ///
 /// #[derive(Serialize, Deserialize, ToAsyncApiMessage)]
-/// #[serde(tag = "message")]
-/// pub enum Operation {
-///     #[serde(rename = "echo")]
+/// #[serde(tag = "type")]
+/// pub enum Message {
+///     #[serde(rename = "chat")]
+///     Chat { room: String, text: String },
 ///     Echo { id: i64, text: String },
 /// }
 /// ```
@@ -30,16 +35,63 @@ pub fn derive_to_asyncapi_message(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
     let name = &input.ident;
 
-    // TODO: Parse serde attributes
-    // TODO: Parse asyncapi attributes
-    // TODO: Generate message metadata
+    // Extract serde tag attribute from enum
+    let tag_field = extract_serde_tag(&input.attrs);
 
-    // Placeholder implementation
+    // Parse enum variants
+    let messages = match &input.data {
+        Data::Enum(data_enum) => {
+            let mut message_names = Vec::new();
+
+            for variant in &data_enum.variants {
+                let variant_name = &variant.ident;
+
+                // Check for serde(rename) attribute on variant
+                let message_name = extract_serde_rename(&variant.attrs)
+                    .unwrap_or_else(|| variant_name.to_string());
+
+                message_names.push(message_name);
+            }
+
+            message_names
+        }
+        Data::Struct(_) => {
+            // For structs, just use the type name
+            vec![name.to_string()]
+        }
+        Data::Union(_) => {
+            return syn::Error::new_spanned(name, "ToAsyncApiMessage cannot be derived for unions")
+                .to_compile_error()
+                .into();
+        }
+    };
+
+    let message_count = messages.len();
+    let message_literals = messages.iter().map(|s| s.as_str());
+
+    let tag_info = if let Some(tag) = tag_field {
+        quote! {
+            Some(#tag)
+        }
+    } else {
+        quote! { None }
+    };
+
     let expanded = quote! {
         impl #name {
-            /// Get AsyncAPI message metadata for this type
-            pub fn asyncapi_messages() -> Vec<String> {
-                vec![stringify!(#name).to_string()]
+            /// Get AsyncAPI message names for this type
+            pub fn asyncapi_message_names() -> Vec<&'static str> {
+                vec![#(#message_literals),*]
+            }
+
+            /// Get the number of messages in this type
+            pub fn asyncapi_message_count() -> usize {
+                #message_count
+            }
+
+            /// Get the serde tag field name if this is a tagged enum
+            pub fn asyncapi_tag_field() -> Option<&'static str> {
+                #tag_info
             }
         }
     };
