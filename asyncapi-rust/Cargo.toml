@@ -1,0 +1,29 @@
+[package]
+name = "asyncapi-rust"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+documentation.workspace = true
+keywords.workspace = true
+categories.workspace = true
+description = "AsyncAPI 3.0 specification generation for Rust WebSockets and async protocols"
+
+[dependencies]
+asyncapi-rust-codegen = { version = "0.1.0", path = "../asyncapi-rust-codegen" }
+asyncapi-rust-models = { version = "0.1.0", path = "../asyncapi-rust-models" }
+
+# Re-export commonly used dependencies
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+[dev-dependencies]
+# For testing generated code
+serde = { workspace = true, features = ["derive"] }
+
+[lib]
+name = "asyncapi_rust"
+path = "src/lib.rs"
