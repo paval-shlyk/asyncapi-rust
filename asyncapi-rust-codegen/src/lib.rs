@@ -47,6 +47,7 @@ pub fn derive_to_asyncapi_message(input: TokenStream) -> TokenStream {
         description: Option<String>,
         title: Option<String>,
         content_type: Option<String>,
+        triggers_binary: bool,
     }
 
     // Parse enum variants or struct
@@ -70,6 +71,7 @@ pub fn derive_to_asyncapi_message(input: TokenStream) -> TokenStream {
                     description: asyncapi_meta.description,
                     title: asyncapi_meta.title,
                     content_type: asyncapi_meta.content_type,
+                    triggers_binary: asyncapi_meta.triggers_binary,
                 });
             }
 
@@ -85,6 +87,7 @@ pub fn derive_to_asyncapi_message(input: TokenStream) -> TokenStream {
                 description: asyncapi_meta.description,
                 title: asyncapi_meta.title,
                 content_type: asyncapi_meta.content_type,
+                triggers_binary: asyncapi_meta.triggers_binary,
             }]
         }
         Data::Union(_) => {
@@ -124,6 +127,8 @@ pub fn derive_to_asyncapi_message(input: TokenStream) -> TokenStream {
     let message_content_types = messages.iter().map(|m| {
         if let Some(ref ct) = m.content_type {
             quote! { Some(#ct.to_string()) }
+        } else if m.triggers_binary {
+            quote! { Some("application/octet-stream".to_string()) }
         } else {
             quote! { Some("application/json".to_string()) }
         }

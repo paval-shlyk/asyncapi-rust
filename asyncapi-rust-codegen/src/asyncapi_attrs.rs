@@ -9,6 +9,7 @@ pub struct AsyncApiMeta {
     pub description: Option<String>,
     pub title: Option<String>,
     pub content_type: Option<String>,
+    pub triggers_binary: bool,
 }
 
 /// Extract asyncapi metadata from `#[asyncapi(...)]` attributes
@@ -37,6 +38,9 @@ pub fn extract_asyncapi_meta(attrs: &[Attribute]) -> AsyncApiMeta {
                 let value = nested.value()?;
                 let s: syn::LitStr = value.parse()?;
                 meta.content_type = Some(s.value());
+            } else if nested.path.is_ident("triggers_binary") {
+                // Flag attribute (no value)
+                meta.triggers_binary = true;
             }
             Ok(())
         });
@@ -97,5 +101,16 @@ mod tests {
         let meta = extract_asyncapi_meta(&attrs);
         assert_eq!(meta.summary, None);
         assert_eq!(meta.description, None);
+    }
+
+    #[test]
+    fn test_extract_triggers_binary() {
+        let attrs: Vec<Attribute> = vec![parse_quote! {
+            #[asyncapi(triggers_binary)]
+        }];
+
+        let meta = extract_asyncapi_meta(&attrs);
+        assert!(meta.triggers_binary);
+        assert_eq!(meta.content_type, None);
     }
 }

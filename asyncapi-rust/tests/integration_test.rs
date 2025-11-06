@@ -57,6 +57,10 @@ pub enum DocumentedMessage {
     /// Binary file transfer
     #[asyncapi(content_type = "application/octet-stream")]
     File { filename: String, data: Vec<u8> },
+
+    /// Binary data with triggers_binary flag
+    #[asyncapi(triggers_binary)]
+    Binary { data: Vec<u8> },
 }
 
 #[test]
@@ -126,7 +130,7 @@ fn test_enum_schema_generation() {
 #[test]
 fn test_asyncapi_attributes() {
     let messages = DocumentedMessage::asyncapi_messages();
-    assert_eq!(messages.len(), 3);
+    assert_eq!(messages.len(), 4);
 
     // Test Join message with summary and description
     let join = &messages[0];
@@ -153,6 +157,14 @@ fn test_asyncapi_attributes() {
     assert_eq!(file.name, Some("File".to_string()));
     assert_eq!(
         file.content_type,
+        Some("application/octet-stream".to_string())
+    );
+
+    // Test Binary message with triggers_binary flag
+    let binary = &messages[3];
+    assert_eq!(binary.name, Some("Binary".to_string()));
+    assert_eq!(
+        binary.content_type,
         Some("application/octet-stream".to_string())
     );
 }
