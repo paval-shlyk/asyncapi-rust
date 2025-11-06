@@ -11,6 +11,7 @@ documentation.workspace = true
 keywords.workspace = true
 categories.workspace = true
 description = "Procedural macro implementation for asyncapi-rust"
+readme = "../README.md"
 
 [lib]
 proc-macro = true

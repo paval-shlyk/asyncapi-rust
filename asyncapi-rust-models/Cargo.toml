@@ -11,6 +11,7 @@ documentation.workspace = true
 keywords.workspace = true
 categories.workspace = true
 description = "Runtime data structures for asyncapi-rust (AsyncAPI 3.0 spec models)"
+readme = "../README.md"
 
 [dependencies]
 serde = { workspace = true, features = ["derive"] }
