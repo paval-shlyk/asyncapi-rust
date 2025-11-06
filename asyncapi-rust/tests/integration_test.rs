@@ -35,6 +35,30 @@ pub struct SimpleMessage {
     pub text: String,
 }
 
+// Test enum with asyncapi attributes
+#[derive(Serialize, Deserialize, JsonSchema, ToAsyncApiMessage)]
+#[serde(tag = "type")]
+pub enum DocumentedMessage {
+    /// Join a room
+    #[asyncapi(
+        summary = "User joins a chat room",
+        description = "Sent when a user enters a room"
+    )]
+    Join { username: String, room: String },
+
+    /// Leave a room
+    #[asyncapi(
+        summary = "User leaves a chat room",
+        description = "Sent when a user exits a room",
+        title = "Leave Room"
+    )]
+    Leave { username: String, room: String },
+
+    /// Binary file transfer
+    #[asyncapi(content_type = "application/octet-stream")]
+    File { filename: String, data: Vec<u8> },
+}
+
 #[test]
 fn test_basic_enum_messages() {
     let names = BasicMessage::asyncapi_message_names();
@@ -97,4 +121,38 @@ fn test_enum_schema_generation() {
     // Both should have schemas
     assert!(messages[0].payload.is_some());
     assert!(messages[1].payload.is_some());
+}
+
+#[test]
+fn test_asyncapi_attributes() {
+    let messages = DocumentedMessage::asyncapi_messages();
+    assert_eq!(messages.len(), 3);
+
+    // Test Join message with summary and description
+    let join = &messages[0];
+    assert_eq!(join.name, Some("Join".to_string()));
+    assert_eq!(join.summary, Some("User joins a chat room".to_string()));
+    assert_eq!(
+        join.description,
+        Some("Sent when a user enters a room".to_string())
+    );
+    assert_eq!(join.content_type, Some("application/json".to_string()));
+
+    // Test Leave message with custom title
+    let leave = &messages[1];
+    assert_eq!(leave.name, Some("Leave".to_string()));
+    assert_eq!(leave.title, Some("Leave Room".to_string()));
+    assert_eq!(leave.summary, Some("User leaves a chat room".to_string()));
+    assert_eq!(
+        leave.description,
+        Some("Sent when a user exits a room".to_string())
+    );
+
+    // Test File message with custom content type
+    let file = &messages[2];
+    assert_eq!(file.name, Some("File".to_string()));
+    assert_eq!(
+        file.content_type,
+        Some("application/octet-stream".to_string())
+    );
 }

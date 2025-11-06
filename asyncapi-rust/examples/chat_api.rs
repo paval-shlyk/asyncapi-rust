@@ -23,6 +23,10 @@ use std::collections::HashMap;
 pub enum ChatMessage {
     /// User joins a chat room
     #[serde(rename = "user.join")]
+    #[asyncapi(
+        summary = "User joins a chat room",
+        description = "Sent when a user successfully joins a chat room"
+    )]
     UserJoin {
         /// Username of the joining user
         username: String,
@@ -32,6 +36,10 @@ pub enum ChatMessage {
 
     /// User leaves a chat room
     #[serde(rename = "user.leave")]
+    #[asyncapi(
+        summary = "User leaves a chat room",
+        description = "Sent when a user exits a chat room"
+    )]
     UserLeave {
         /// Username of the leaving user
         username: String,
@@ -41,6 +49,10 @@ pub enum ChatMessage {
 
     /// Send a chat message
     #[serde(rename = "chat.message")]
+    #[asyncapi(
+        summary = "Send a chat message",
+        description = "Broadcast a message to all users in a chat room"
+    )]
     Chat {
         /// Username of sender
         username: String,
@@ -54,6 +66,10 @@ pub enum ChatMessage {
 
     /// User is typing indicator
     #[serde(rename = "user.typing")]
+    #[asyncapi(
+        summary = "User typing indicator",
+        description = "Real-time indication that a user is composing a message"
+    )]
     Typing {
         /// Username of typing user
         username: String,

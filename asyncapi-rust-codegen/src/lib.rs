@@ -10,8 +10,10 @@ use proc_macro::TokenStream;
 use quote::quote;
 use syn::{Data, DeriveInput, parse_macro_input};
 
+mod asyncapi_attrs;
 mod serde_attrs;
 
+use asyncapi_attrs::extract_asyncapi_meta;
 use serde_attrs::{extract_serde_rename, extract_serde_tag};
 
 /// Derive macro for generating AsyncAPI message metadata
@@ -38,10 +40,19 @@ pub fn derive_to_asyncapi_message(input: TokenStream) -> TokenStream {
     // Extract serde tag attribute from enum
     let tag_field = extract_serde_tag(&input.attrs);
 
-    // Parse enum variants
+    // Struct to hold message metadata
+    struct MessageMeta {
+        name: String,
+        summary: Option<String>,
+        description: Option<String>,
+        title: Option<String>,
+        content_type: Option<String>,
+    }
+
+    // Parse enum variants or struct
     let messages = match &input.data {
         Data::Enum(data_enum) => {
-            let mut message_names = Vec::new();
+            let mut message_metas = Vec::new();
 
             for variant in &data_enum.variants {
                 let variant_name = &variant.ident;
@@ -50,14 +61,31 @@ pub fn derive_to_asyncapi_message(input: TokenStream) -> TokenStream {
                 let message_name = extract_serde_rename(&variant.attrs)
                     .unwrap_or_else(|| variant_name.to_string());
 
-                message_names.push(message_name);
+                // Extract asyncapi metadata
+                let asyncapi_meta = extract_asyncapi_meta(&variant.attrs);
+
+                message_metas.push(MessageMeta {
+                    name: message_name,
+                    summary: asyncapi_meta.summary,
+                    description: asyncapi_meta.description,
+                    title: asyncapi_meta.title,
+                    content_type: asyncapi_meta.content_type,
+                });
             }
 
-            message_names
+            message_metas
         }
         Data::Struct(_) => {
-            // For structs, just use the type name
-            vec![name.to_string()]
+            // For structs, extract metadata from the struct itself
+            let asyncapi_meta = extract_asyncapi_meta(&input.attrs);
+
+            vec![MessageMeta {
+                name: name.to_string(),
+                summary: asyncapi_meta.summary,
+                description: asyncapi_meta.description,
+                title: asyncapi_meta.title,
+                content_type: asyncapi_meta.content_type,
+            }]
         }
         Data::Union(_) => {
             return syn::Error::new_spanned(name, "ToAsyncApiMessage cannot be derived for unions")
@@ -67,7 +95,39 @@ pub fn derive_to_asyncapi_message(input: TokenStream) -> TokenStream {
     };
 
     let message_count = messages.len();
-    let message_literals = messages.iter().map(|s| s.as_str());
+    let message_literals = messages.iter().map(|m| m.name.as_str());
+
+    // Prepare metadata for message generation
+    let message_names_for_gen = messages.iter().map(|m| m.name.as_str());
+    let message_titles = messages.iter().map(|m| {
+        if let Some(ref title) = m.title {
+            quote! { Some(#title.to_string()) }
+        } else {
+            let name = &m.name;
+            quote! { Some(#name.to_string()) }
+        }
+    });
+    let message_summaries = messages.iter().map(|m| {
+        if let Some(ref summary) = m.summary {
+            quote! { Some(#summary.to_string()) }
+        } else {
+            quote! { None }
+        }
+    });
+    let message_descriptions = messages.iter().map(|m| {
+        if let Some(ref desc) = m.description {
+            quote! { Some(#desc.to_string()) }
+        } else {
+            quote! { None }
+        }
+    });
+    let message_content_types = messages.iter().map(|m| {
+        if let Some(ref ct) = m.content_type {
+            quote! { Some(#ct.to_string()) }
+        } else {
+            quote! { Some("application/json".to_string()) }
+        }
+    });
 
     let tag_info = if let Some(tag) = tag_field {
         quote! {
@@ -102,9 +162,7 @@ pub fn derive_to_asyncapi_message(input: TokenStream) -> TokenStream {
                 Self: schemars::JsonSchema,
             {
                 use schemars::schema_for;
-                use schemars::schema::RootSchema;
 
-                let message_names = Self::asyncapi_message_names();
                 let schema = schema_for!(Self);
 
                 // Convert schemars RootSchema to our Schema type
@@ -114,18 +172,15 @@ pub fn derive_to_asyncapi_message(input: TokenStream) -> TokenStream {
                 let payload_schema: asyncapi_rust::Schema = serde_json::from_value(schema_json)
                     .expect("Failed to deserialize schema");
 
-                // Create a Message for each message name
-                message_names
-                    .iter()
-                    .map(|name| asyncapi_rust::Message {
-                        name: Some(name.to_string()),
-                        title: Some(name.to_string()),
-                        summary: None,
-                        description: None,
-                        content_type: Some("application/json".to_string()),
-                        payload: Some(payload_schema.clone()),
-                    })
-                    .collect()
+                // Create messages with metadata
+                vec![#(asyncapi_rust::Message {
+                    name: Some(#message_names_for_gen.to_string()),
+                    title: #message_titles,
+                    summary: #message_summaries,
+                    description: #message_descriptions,
+                    content_type: #message_content_types,
+                    payload: Some(payload_schema.clone()),
+                }),*]
             }
         }
     };
