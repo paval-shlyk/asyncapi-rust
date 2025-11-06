@@ -140,7 +140,8 @@ fn main() {
     println!();
 
     println!("📚 Example Handler Pattern:");
-    println!(r#"
+    println!(
+        r#"
     async fn websocket_handler(
         req: HttpRequest,
         stream: web::Payload,
@@ -170,5 +171,6 @@ fn main() {
 
         Ok(response)
     }}
-    "#);
+    "#
+    );
 }

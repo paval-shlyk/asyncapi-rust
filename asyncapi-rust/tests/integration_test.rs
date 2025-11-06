@@ -216,8 +216,17 @@ fn test_asyncapi_minimal() {
 // Test AsyncApi with servers, channels, and operations
 #[allow(clippy::duplicated_attributes)] // False positive - different operations can reference same channel
 #[derive(AsyncApi)]
-#[asyncapi(title = "Full API", version = "1.0.0", description = "Complete API spec")]
-#[asyncapi_server(name = "production", host = "api.example.com", protocol = "wss", description = "Production server")]
+#[asyncapi(
+    title = "Full API",
+    version = "1.0.0",
+    description = "Complete API spec"
+)]
+#[asyncapi_server(
+    name = "production",
+    host = "api.example.com",
+    protocol = "wss",
+    description = "Production server"
+)]
 #[asyncapi_server(name = "development", host = "localhost:8080", protocol = "ws")]
 #[asyncapi_channel(name = "chat", address = "/ws/chat")]
 #[asyncapi_operation(name = "sendMessage", action = "send", channel = "chat")]
@@ -237,12 +246,19 @@ fn test_asyncapi_full() {
     let servers = spec.servers.expect("Should have servers");
     assert_eq!(servers.len(), 2);
 
-    let prod_server = servers.get("production").expect("Should have production server");
+    let prod_server = servers
+        .get("production")
+        .expect("Should have production server");
     assert_eq!(prod_server.host, "api.example.com");
     assert_eq!(prod_server.protocol, "wss");
-    assert_eq!(prod_server.description, Some("Production server".to_string()));
+    assert_eq!(
+        prod_server.description,
+        Some("Production server".to_string())
+    );
 
-    let dev_server = servers.get("development").expect("Should have development server");
+    let dev_server = servers
+        .get("development")
+        .expect("Should have development server");
     assert_eq!(dev_server.host, "localhost:8080");
     assert_eq!(dev_server.protocol, "ws");
     assert_eq!(dev_server.description, None);
@@ -258,12 +274,22 @@ fn test_asyncapi_full() {
     let operations = spec.operations.expect("Should have operations");
     assert_eq!(operations.len(), 2);
 
-    let send_op = operations.get("sendMessage").expect("Should have sendMessage operation");
-    assert!(matches!(send_op.action, asyncapi_rust::OperationAction::Send));
+    let send_op = operations
+        .get("sendMessage")
+        .expect("Should have sendMessage operation");
+    assert!(matches!(
+        send_op.action,
+        asyncapi_rust::OperationAction::Send
+    ));
     assert_eq!(send_op.channel.reference, "#/channels/chat");
 
-    let receive_op = operations.get("receiveMessage").expect("Should have receiveMessage operation");
-    assert!(matches!(receive_op.action, asyncapi_rust::OperationAction::Receive));
+    let receive_op = operations
+        .get("receiveMessage")
+        .expect("Should have receiveMessage operation");
+    assert!(matches!(
+        receive_op.action,
+        asyncapi_rust::OperationAction::Receive
+    ));
     assert_eq!(receive_op.channel.reference, "#/channels/chat");
 }
 
@@ -303,25 +329,36 @@ fn test_asyncapi_with_messages() {
 
     // Verify Components exist and have messages
     let components = spec.components.expect("Should have components");
-    let messages = components.messages.expect("Should have messages in components");
+    let messages = components
+        .messages
+        .expect("Should have messages in components");
 
     // Verify we have all 3 messages (2 from ApiMessage, 1 from SystemMessage)
     assert_eq!(messages.len(), 3);
 
     // Verify user.join message
-    let user_join = messages.get("user.join").expect("Should have user.join message");
+    let user_join = messages
+        .get("user.join")
+        .expect("Should have user.join message");
     assert_eq!(user_join.name, Some("user.join".to_string()));
     assert_eq!(user_join.summary, Some("User joins".to_string()));
-    assert_eq!(user_join.description, Some("User enters a room".to_string()));
+    assert_eq!(
+        user_join.description,
+        Some("User enters a room".to_string())
+    );
     assert!(user_join.payload.is_some());
 
     // Verify user.leave message
-    let user_leave = messages.get("user.leave").expect("Should have user.leave message");
+    let user_leave = messages
+        .get("user.leave")
+        .expect("Should have user.leave message");
     assert_eq!(user_leave.name, Some("user.leave".to_string()));
     assert_eq!(user_leave.summary, Some("User leaves".to_string()));
 
     // Verify system.status message
-    let system_status = messages.get("system.status").expect("Should have system.status message");
+    let system_status = messages
+        .get("system.status")
+        .expect("Should have system.status message");
     assert_eq!(system_status.name, Some("system.status".to_string()));
     assert_eq!(system_status.summary, Some("System status".to_string()));
 }

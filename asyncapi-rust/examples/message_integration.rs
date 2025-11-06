@@ -7,7 +7,7 @@
 //!
 //! Run with: cargo run --example message_integration
 
-use asyncapi_rust::{schemars::JsonSchema, AsyncApi, ToAsyncApiMessage};
+use asyncapi_rust::{AsyncApi, ToAsyncApiMessage, schemars::JsonSchema};
 use serde::{Deserialize, Serialize};
 
 /// Chat messages for a chat application
@@ -51,10 +51,7 @@ pub enum SystemMessage {
 
     /// Error message
     #[serde(rename = "system.error")]
-    #[asyncapi(
-        summary = "System error",
-        description = "Error occurred on the server"
-    )]
+    #[asyncapi(summary = "System error", description = "Error occurred on the server")]
     Error { code: String, message: String },
 }
 
@@ -122,7 +119,10 @@ fn main() {
                 asyncapi_rust::OperationAction::Send => "send",
                 asyncapi_rust::OperationAction::Receive => "receive",
             };
-            println!("  - {}: {} to {}", name, action, operation.channel.reference);
+            println!(
+                "  - {}: {} to {}",
+                name, action, operation.channel.reference
+            );
         }
         println!();
     }

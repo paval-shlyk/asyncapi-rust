@@ -93,8 +93,8 @@ pub fn extract_asyncapi_spec_meta(attrs: &[Attribute]) -> AsyncApiSpecMeta {
 
 /// Extract message type identifiers from `#[asyncapi_messages(...)]` attribute
 fn extract_message_types(attr: &Attribute) -> syn::Result<Vec<Ident>> {
-    use syn::punctuated::Punctuated;
     use syn::Token;
+    use syn::punctuated::Punctuated;
 
     // Parse comma-separated list of identifiers
     let types = attr.parse_args_with(Punctuated::<Ident, Token![,]>::parse_terminated)?;
@@ -279,7 +279,10 @@ mod tests {
 
         let meta = extract_asyncapi_spec_meta(&attrs);
         assert_eq!(meta.servers.len(), 1);
-        assert_eq!(meta.servers[0].description, Some("Development server".to_string()));
+        assert_eq!(
+            meta.servers[0].description,
+            Some("Development server".to_string())
+        );
     }
 
     #[test]

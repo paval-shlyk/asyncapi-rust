@@ -25,16 +25,16 @@ use asyncapi_rust::AsyncApi;
     protocol = "wss",
     description = "Production WebSocket server with TLS"
 )]
-#[asyncapi_server(
-    name = "development",
-    host = "localhost:8080",
-    protocol = "ws"
-)]
+#[asyncapi_server(name = "development", host = "localhost:8080", protocol = "ws")]
 #[asyncapi_channel(name = "chat", address = "/ws/chat")]
 #[asyncapi_channel(name = "notifications", address = "/ws/notifications")]
 #[asyncapi_operation(name = "sendChatMessage", action = "send", channel = "chat")]
 #[asyncapi_operation(name = "receiveChatMessage", action = "receive", channel = "chat")]
-#[asyncapi_operation(name = "receiveNotification", action = "receive", channel = "notifications")]
+#[asyncapi_operation(
+    name = "receiveNotification",
+    action = "receive",
+    channel = "notifications"
+)]
 struct ChatApi;
 
 fn main() {

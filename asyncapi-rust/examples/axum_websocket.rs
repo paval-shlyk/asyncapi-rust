@@ -178,7 +178,8 @@ fn main() {
     println!();
 
     println!("📚 Example Handler Pattern:");
-    println!(r#"
+    println!(
+        r#"
     use axum::{{
         extract::ws::{{WebSocket, WebSocketUpgrade, Message}},
         response::Response,
@@ -227,5 +228,6 @@ fn main() {
             .unwrap();
         axum::serve(listener, app).await.unwrap();
     }}
-    "#);
+    "#
+    );
 }

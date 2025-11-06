@@ -376,7 +376,16 @@ pub fn derive_to_asyncapi_message(input: TokenStream) -> TokenStream {
 /// )]
 /// struct ChatApi;
 /// ```
-#[proc_macro_derive(AsyncApi, attributes(asyncapi, asyncapi_server, asyncapi_channel, asyncapi_operation, asyncapi_messages))]
+#[proc_macro_derive(
+    AsyncApi,
+    attributes(
+        asyncapi,
+        asyncapi_server,
+        asyncapi_channel,
+        asyncapi_operation,
+        asyncapi_messages
+    )
+)]
 pub fn derive_asyncapi(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
     let name = &input.ident;
@@ -390,7 +399,7 @@ pub fn derive_asyncapi(input: TokenStream) -> TokenStream {
         None => {
             return syn::Error::new_spanned(
                 name,
-                "AsyncApi requires a title attribute: #[asyncapi(title = \"...\")]"
+                "AsyncApi requires a title attribute: #[asyncapi(title = \"...\")]",
             )
             .to_compile_error()
             .into();
@@ -402,7 +411,7 @@ pub fn derive_asyncapi(input: TokenStream) -> TokenStream {
         None => {
             return syn::Error::new_spanned(
                 name,
-                "AsyncApi requires a version attribute: #[asyncapi(version = \"...\")]"
+                "AsyncApi requires a version attribute: #[asyncapi(version = \"...\")]",
             )
             .to_compile_error()
             .into();
@@ -499,7 +508,7 @@ pub fn derive_asyncapi(input: TokenStream) -> TokenStream {
             } else {
                 return syn::Error::new_spanned(
                     name,
-                    format!("Invalid action '{}', must be 'send' or 'receive'", action)
+                    format!("Invalid action '{}', must be 'send' or 'receive'", action),
                 )
                 .to_compile_error();
             };

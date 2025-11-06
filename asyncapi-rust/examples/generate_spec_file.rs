@@ -45,18 +45,15 @@ fn main() {
     let spec: AsyncApiSpec = ExampleApi::asyncapi_spec();
 
     // Serialize to JSON
-    let json = serde_json::to_string_pretty(&spec)
-        .expect("Failed to serialize AsyncAPI spec");
+    let json = serde_json::to_string_pretty(&spec).expect("Failed to serialize AsyncAPI spec");
 
     // Create output directory if it doesn't exist
     let output_dir = Path::new("target/asyncapi");
-    fs::create_dir_all(output_dir)
-        .expect("Failed to create output directory");
+    fs::create_dir_all(output_dir).expect("Failed to create output directory");
 
     // Write to file
     let output_path = output_dir.join("asyncapi.json");
-    fs::write(&output_path, &json)
-        .expect("Failed to write spec file");
+    fs::write(&output_path, &json).expect("Failed to write spec file");
 
     println!("✅ Generated: {}", output_path.display());
     println!("\n📄 Specification preview:");
