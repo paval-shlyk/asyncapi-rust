@@ -376,7 +376,7 @@ pub fn derive_to_asyncapi_message(input: TokenStream) -> TokenStream {
 /// )]
 /// struct ChatApi;
 /// ```
-#[proc_macro_derive(AsyncApi, attributes(asyncapi, asyncapi_server, asyncapi_channel, asyncapi_operation))]
+#[proc_macro_derive(AsyncApi, attributes(asyncapi, asyncapi_server, asyncapi_channel, asyncapi_operation, asyncapi_messages))]
 pub fn derive_asyncapi(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
     let name = &input.ident;
@@ -527,6 +527,33 @@ pub fn derive_asyncapi(input: TokenStream) -> TokenStream {
         }
     };
 
+    // Generate components with messages
+    let components_code = if spec_meta.message_types.is_empty() {
+        quote! { None }
+    } else {
+        let message_calls = spec_meta.message_types.iter().map(|type_name| {
+            quote! {
+                // Call asyncapi_messages() for this type and add to messages map
+                for msg in #type_name::asyncapi_messages() {
+                    if let Some(ref name) = msg.name {
+                        messages.insert(name.clone(), msg.clone());
+                    }
+                }
+            }
+        });
+
+        quote! {
+            {
+                let mut messages = std::collections::HashMap::new();
+                #(#message_calls)*
+                Some(asyncapi_rust::Components {
+                    messages: if messages.is_empty() { None } else { Some(messages) },
+                    schemas: None,
+                })
+            }
+        }
+    };
+
     let expanded = quote! {
         impl #name {
             /// Generate the AsyncAPI specification
@@ -544,7 +571,7 @@ pub fn derive_asyncapi(input: TokenStream) -> TokenStream {
                     servers: #servers_code,
                     channels: #channels_code,
                     operations: #operations_code,
-                    components: None,
+                    components: #components_code,
                 }
             }
         }

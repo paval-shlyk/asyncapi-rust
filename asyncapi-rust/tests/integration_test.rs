@@ -266,3 +266,62 @@ fn test_asyncapi_full() {
     assert!(matches!(receive_op.action, asyncapi_rust::OperationAction::Receive));
     assert_eq!(receive_op.channel.reference, "#/channels/chat");
 }
+
+// Test AsyncApi with message integration
+#[derive(Serialize, Deserialize, JsonSchema, ToAsyncApiMessage)]
+#[serde(tag = "type")]
+enum ApiMessage {
+    #[serde(rename = "user.join")]
+    #[asyncapi(summary = "User joins", description = "User enters a room")]
+    UserJoin { username: String, room: String },
+
+    #[serde(rename = "user.leave")]
+    #[asyncapi(summary = "User leaves")]
+    UserLeave { username: String, room: String },
+}
+
+#[derive(Serialize, Deserialize, JsonSchema, ToAsyncApiMessage)]
+#[serde(tag = "type")]
+enum SystemMessage {
+    #[serde(rename = "system.status")]
+    #[asyncapi(summary = "System status")]
+    SystemStatus { status: String },
+}
+
+#[derive(AsyncApi)]
+#[asyncapi(title = "Message Integration API", version = "1.0.0")]
+#[asyncapi_messages(ApiMessage, SystemMessage)]
+struct MessageIntegrationApi;
+
+#[test]
+fn test_asyncapi_with_messages() {
+    let spec = MessageIntegrationApi::asyncapi_spec();
+
+    // Verify Info
+    assert_eq!(spec.info.title, "Message Integration API");
+    assert_eq!(spec.info.version, "1.0.0");
+
+    // Verify Components exist and have messages
+    let components = spec.components.expect("Should have components");
+    let messages = components.messages.expect("Should have messages in components");
+
+    // Verify we have all 3 messages (2 from ApiMessage, 1 from SystemMessage)
+    assert_eq!(messages.len(), 3);
+
+    // Verify user.join message
+    let user_join = messages.get("user.join").expect("Should have user.join message");
+    assert_eq!(user_join.name, Some("user.join".to_string()));
+    assert_eq!(user_join.summary, Some("User joins".to_string()));
+    assert_eq!(user_join.description, Some("User enters a room".to_string()));
+    assert!(user_join.payload.is_some());
+
+    // Verify user.leave message
+    let user_leave = messages.get("user.leave").expect("Should have user.leave message");
+    assert_eq!(user_leave.name, Some("user.leave".to_string()));
+    assert_eq!(user_leave.summary, Some("User leaves".to_string()));
+
+    // Verify system.status message
+    let system_status = messages.get("system.status").expect("Should have system.status message");
+    assert_eq!(system_status.name, Some("system.status".to_string()));
+    assert_eq!(system_status.summary, Some("System status".to_string()));
+}

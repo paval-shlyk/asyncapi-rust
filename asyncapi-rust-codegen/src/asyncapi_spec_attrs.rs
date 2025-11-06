@@ -1,6 +1,6 @@
 //! Utilities for parsing asyncapi spec-level attributes
 
-use syn::Attribute;
+use syn::{Attribute, Ident};
 
 /// AsyncAPI spec metadata extracted from attributes
 #[derive(Debug, Default, Clone)]
@@ -11,6 +11,7 @@ pub struct AsyncApiSpecMeta {
     pub servers: Vec<ServerMeta>,
     pub channels: Vec<ChannelMeta>,
     pub operations: Vec<OperationMeta>,
+    pub message_types: Vec<Ident>,
 }
 
 /// Server metadata
@@ -79,10 +80,25 @@ pub fn extract_asyncapi_spec_meta(attrs: &[Attribute]) -> AsyncApiSpecMeta {
             if let Some(operation) = extract_operation(attr) {
                 meta.operations.push(operation);
             }
+        } else if attr.path().is_ident("asyncapi_messages") {
+            // Parse message type references
+            if let Ok(types) = extract_message_types(attr) {
+                meta.message_types.extend(types);
+            }
         }
     }
 
     meta
+}
+
+/// Extract message type identifiers from `#[asyncapi_messages(...)]` attribute
+fn extract_message_types(attr: &Attribute) -> syn::Result<Vec<Ident>> {
+    use syn::punctuated::Punctuated;
+    use syn::Token;
+
+    // Parse comma-separated list of identifiers
+    let types = attr.parse_args_with(Punctuated::<Ident, Token![,]>::parse_terminated)?;
+    Ok(types.into_iter().collect())
 }
 
 /// Extract server metadata from `#[asyncapi_server(...)]` attribute
@@ -306,5 +322,29 @@ mod tests {
         assert_eq!(meta.servers.len(), 1);
         assert_eq!(meta.channels.len(), 1);
         assert_eq!(meta.operations.len(), 2);
+    }
+
+    #[test]
+    fn test_extract_message_types() {
+        let attrs: Vec<Attribute> = vec![parse_quote! {
+            #[asyncapi_messages(ChatMessage, UserMessage, SystemMessage)]
+        }];
+
+        let meta = extract_asyncapi_spec_meta(&attrs);
+        assert_eq!(meta.message_types.len(), 3);
+        assert_eq!(meta.message_types[0].to_string(), "ChatMessage");
+        assert_eq!(meta.message_types[1].to_string(), "UserMessage");
+        assert_eq!(meta.message_types[2].to_string(), "SystemMessage");
+    }
+
+    #[test]
+    fn test_extract_single_message_type() {
+        let attrs: Vec<Attribute> = vec![parse_quote! {
+            #[asyncapi_messages(ChatMessage)]
+        }];
+
+        let meta = extract_asyncapi_spec_meta(&attrs);
+        assert_eq!(meta.message_types.len(), 1);
+        assert_eq!(meta.message_types[0].to_string(), "ChatMessage");
     }
 }
