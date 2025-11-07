@@ -25,7 +25,8 @@ schemars = { workspace = true }
 [dev-dependencies]
 # For testing generated code
 serde = { workspace = true, features = ["derive"] }
-schemars = { workspace = true, features = ["derive"] }
+schemars = { workspace = true, features = ["derive", "chrono04"] }
+chrono = { version = "0.4", features = ["serde"] }
 
 [lib]
 name = "asyncapi_rust"

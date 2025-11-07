@@ -259,7 +259,7 @@ pub enum MessageRef {
 ///     description: Some("Sent when a user posts a message".to_string()),
 ///     content_type: Some("application/json".to_string()),
 ///     payload: Some(Schema::Object(Box::new(SchemaObject {
-///         schema_type: Some("object".to_string()),
+///         schema_type: Some(serde_json::json!("object")),
 ///         properties: None,
 ///         required: None,
 ///         description: Some("Chat message payload".to_string()),
@@ -412,7 +412,7 @@ pub struct Components {
 /// use std::collections::HashMap;
 ///
 /// let schema = Schema::Object(Box::new(SchemaObject {
-///     schema_type: Some("object".to_string()),
+///     schema_type: Some(serde_json::json!("object")),
 ///     properties: None,
 ///     required: Some(vec!["username".to_string(), "room".to_string()]),
 ///     description: Some("A chat message".to_string()),
@@ -458,7 +458,7 @@ pub enum Schema {
 ///
 /// // String property schema
 /// let username_schema = Schema::Object(Box::new(SchemaObject {
-///     schema_type: Some("string".to_string()),
+///     schema_type: Some(serde_json::json!("string")),
 ///     properties: None,
 ///     required: None,
 ///     description: Some("User's display name".to_string()),
@@ -478,7 +478,7 @@ pub enum Schema {
 /// properties.insert("username".to_string(), Box::new(username_schema));
 ///
 /// let message_schema = SchemaObject {
-///     schema_type: Some("object".to_string()),
+///     schema_type: Some(serde_json::json!("object")),
 ///     properties: Some(properties),
 ///     required: Some(vec!["username".to_string()]),
 ///     description: Some("A chat message".to_string()),
@@ -498,8 +498,9 @@ pub struct SchemaObject {
     /// Schema type
     ///
     /// The JSON Schema type: "object", "array", "string", "number", "integer", "boolean", "null"
+    /// Can also be an array of types for schemas that allow multiple types (e.g., ["string", "null"])
     #[serde(rename = "type", skip_serializing_if = "Option::is_none")]
-    pub schema_type: Option<String>,
+    pub schema_type: Option<serde_json::Value>,
 
     /// Properties (for object type)
     ///
