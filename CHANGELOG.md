@@ -1,3 +1,30 @@
+## [0.2.0] - 2025-11-07
+
+### ⚙️ Miscellaneous
+
+- Fix rustfmt formatting issues
+- Add git-cliff for changelog generation
+
+
+### ⚡ Features
+
+- Add server variables and channel parameters support
+
+
+### 🐛 Bug Fixes
+
+- Support module paths in #[asyncapi_messages(...)]
+- Support schemars 1.1 schema type arrays for optional fields
+
+
+### 📚 Documentation
+
+- Generate retroactive CHANGELOG.md for v0.1.0 and v0.1.1
+- Add server_variables.rs example
+
+
+
+
 ## [unreleased]
 
 ### ⚙️ Miscellaneous
