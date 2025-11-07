@@ -116,7 +116,11 @@ pub enum UserMessage {
         format = "int64"
     )
 )]
-#[asyncapi_operation(name = "subscribeToUpdates", action = "send", channel = "userMessaging")]
+#[asyncapi_operation(
+    name = "subscribeToUpdates",
+    action = "send",
+    channel = "userMessaging"
+)]
 #[asyncapi_operation(name = "receiveUpdates", action = "receive", channel = "userMessaging")]
 #[asyncapi_messages(UserMessage)]
 struct UserApi;
