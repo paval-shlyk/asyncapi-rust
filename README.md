@@ -1,9 +1,5 @@
 # asyncapi-rust
 
-> **⚠️ Early Development Notice**
->
-> This project is in the early stages of development. Documentation, examples, and some links may be incomplete or broken. The API is not yet stable and may change significantly. Stay tuned for updates!
-
 [![Crates.io](https://img.shields.io/crates/v/asyncapi-rust.svg)](https://crates.io/crates/asyncapi-rust)
 [![Documentation](https://docs.rs/asyncapi-rust/badge.svg)](https://docs.rs/asyncapi-rust)
 [![License: MIT OR Apache-2.0](https://img.shields.io/badge/License-MIT%20OR%20Apache--2.0-blue.svg)](https://opensource.org/licenses/MIT)
