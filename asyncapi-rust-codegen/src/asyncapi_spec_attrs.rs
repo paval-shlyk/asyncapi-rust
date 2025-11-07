@@ -572,7 +572,10 @@ mod tests {
         assert_eq!(channel.parameters.len(), 1);
         let param = &channel.parameters[0];
         assert_eq!(param.name, "userId");
-        assert_eq!(param.description, Some("User ID for this WebSocket connection".to_string()));
+        assert_eq!(
+            param.description,
+            Some("User ID for this WebSocket connection".to_string())
+        );
         assert_eq!(param.schema_type, Some("integer".to_string()));
         assert_eq!(param.format, Some("int64".to_string()));
     }

@@ -1,6 +1,6 @@
 use asyncapi_rust::Schema;
 use chrono::NaiveDateTime;
-use schemars::{schema_for, JsonSchema};
+use schemars::{JsonSchema, schema_for};
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, JsonSchema)]

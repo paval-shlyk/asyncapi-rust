@@ -120,11 +120,7 @@ pub enum UserMessage {
     action = "send",
     channel = "userMessaging"
 )]
-#[asyncapi_operation(
-    name = "receiveUpdates",
-    action = "receive",
-    channel = "userMessaging"
-)]
+#[asyncapi_operation(name = "receiveUpdates", action = "receive", channel = "userMessaging")]
 #[asyncapi_messages(UserMessage)]
 struct UserApi;
 
