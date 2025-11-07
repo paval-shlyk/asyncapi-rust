@@ -1,0 +1,88 @@
+# git-cliff configuration for asyncapi-rust
+# https://git-cliff.org/docs/configuration
+
+[changelog]
+# Changelog template - renders release notes from conventional commits
+body = """
+{% if version %}\
+    ## [{{ version | trim_start_matches(pat="v") }}] - {{ timestamp | date(format="%Y-%m-%d") }}
+{% else %}\
+    ## [unreleased]
+{% endif %}\
+{% for group, commits in commits | group_by(attribute="group") %}
+    ### {{ group | striptags | trim | upper_first }}
+    {% for commit in commits
+        | filter(attribute="scope")
+        | unique(attribute="message") %}
+        - **{{ commit.scope }}:** {{ commit.message | upper_first }}\
+    {% endfor %}
+    {% for commit in commits %}
+        {%- if not commit.scope -%}
+        - {{ commit.message | upper_first }}\
+        {% endif -%}
+    {% endfor %}
+{% endfor %}
+
+{% if github.contributors | filter(attribute="is_first_time", value=true) | length != 0 %}
+  ### New Contributors
+{% for contributor in github.contributors | filter(attribute="is_first_time", value=true) %}
+  * @{{ contributor.username }} made their first contribution
+    {%- if contributor.pr_number %} in #{{ contributor.pr_number }} {%- endif %}
+{% endfor %}
+{% endif %}\n
+"""
+trim = true
+footer = """
+**Full Changelog**: https://github.com/mlilback/asyncapi-rust/compare/{{ previous.version }}...{{ version }}
+"""
+
+[git]
+# Parse conventional commits
+conventional_commits = true
+# Exclude non-conventional commits
+filter_unconventional = true
+# Commit message parsers - assign commits to groups
+commit_parsers = [
+    { message = "^feat", group = "⚡ Features" },
+    { message = "^fix", group = "🐛 Bug Fixes" },
+    { message = "^doc", group = "📚 Documentation" },
+    { message = "^perf", group = "🚀 Performance" },
+    { message = "^refactor", group = "♻️ Refactoring" },
+    { message = "^test", group = "🧪 Testing" },
+    { message = "^chore\\(release\\)", skip = true },
+    { message = "^chore\\(deps\\)", skip = true },
+    { message = "^chore", group = "⚙️ Miscellaneous" },
+    { body = ".*security", group = "🛡️ Security" },
+    { message = "^revert", skip = true },
+]
+filter_commits = false
+topo_order = false
+sort_commits = "oldest"
+
+[github]
+owner = "mlilback"
+repo = "asyncapi-rust"
+
+[bump]
+# Pre-1.0 versioning rules
+# Features or breaking changes bump minor version
+# Bug fixes and other changes bump patch version
+features_always_bump_minor = true
+breaking_always_bump_major = false
+
+custom_bump_increment = [
+    # Breaking changes bump MINOR in pre-1.0 (not MAJOR)
+    { pattern = "BREAKING CHANGE:", increment = "minor" },
+    { pattern = "!:", increment = "minor" },
+
+    # Features bump MINOR
+    { pattern = "^feat", increment = "minor" },
+
+    # All others bump PATCH
+    { pattern = "^fix", increment = "patch" },
+    { pattern = "^docs?", increment = "patch" },
+    { pattern = "^perf", increment = "patch" },
+    { pattern = "^refactor", increment = "patch" },
+    { pattern = "^test", increment = "patch" },
+    { pattern = "^chore", increment = "patch" },
+]
