@@ -27,9 +27,13 @@ Add to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-asyncapi-rust = "0.1"
+asyncapi-rust = "0.2"
 serde = { version = "1.0", features = ["derive"] }
-schemars = { version = "0.8", features = ["derive"] }
+schemars = { version = "1.1", features = ["derive"] }
+
+# Optional: for chrono datetime support in schemas
+chrono = { version = "0.4", features = ["serde"] }
+schemars = { version = "1.1", features = ["derive", "chrono04"] }
 ```
 
 Define your WebSocket messages:
@@ -185,6 +189,37 @@ Document binary WebSocket messages (Arrow IPC, Protobuf, MessagePack):
 )]
 pub struct BinaryData;
 ```
+
+## DateTime Support (Chrono)
+
+asyncapi-rust uses `schemars 1.1` with full support for `chrono` datetime types:
+
+```rust
+use asyncapi_rust::{schemars::JsonSchema, ToAsyncApiMessage};
+use chrono::{DateTime, NaiveDateTime, Utc};
+use serde::{Deserialize, Serialize};
+
+#[derive(Serialize, Deserialize, JsonSchema, ToAsyncApiMessage)]
+#[serde(tag = "type")]
+pub enum TimestampedMessage {
+    /// Event with timestamp
+    Event {
+        timestamp: DateTime<Utc>,     // RFC3339 format
+        created_at: NaiveDateTime,    // ISO8601 without timezone
+        message: String,
+    },
+}
+```
+
+**Cargo.toml configuration:**
+```toml
+[dependencies]
+asyncapi-rust = "0.2"
+chrono = { version = "0.4", features = ["serde"] }
+schemars = { version = "1.1", features = ["derive", "chrono04"] }
+```
+
+The `chrono04` feature in schemars enables proper JSON schema generation for chrono datetime types. Without this feature, you would need to use `#[schemars(skip)]` and lose schema information for datetime fields.
 
 ## Generating Specification Files
 

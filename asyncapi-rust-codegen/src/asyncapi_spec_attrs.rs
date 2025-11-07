@@ -1,6 +1,6 @@
 //! Utilities for parsing asyncapi spec-level attributes
 
-use syn::{Attribute, Ident};
+use syn::{Attribute, Path};
 
 /// AsyncAPI spec metadata extracted from attributes
 #[derive(Debug, Default, Clone)]
@@ -11,7 +11,7 @@ pub struct AsyncApiSpecMeta {
     pub servers: Vec<ServerMeta>,
     pub channels: Vec<ChannelMeta>,
     pub operations: Vec<OperationMeta>,
-    pub message_types: Vec<Ident>,
+    pub message_types: Vec<Path>,
 }
 
 /// Server metadata
@@ -91,13 +91,13 @@ pub fn extract_asyncapi_spec_meta(attrs: &[Attribute]) -> AsyncApiSpecMeta {
     meta
 }
 
-/// Extract message type identifiers from `#[asyncapi_messages(...)]` attribute
-fn extract_message_types(attr: &Attribute) -> syn::Result<Vec<Ident>> {
+/// Extract message type paths from `#[asyncapi_messages(...)]` attribute
+fn extract_message_types(attr: &Attribute) -> syn::Result<Vec<Path>> {
     use syn::Token;
     use syn::punctuated::Punctuated;
 
-    // Parse comma-separated list of identifiers
-    let types = attr.parse_args_with(Punctuated::<Ident, Token![,]>::parse_terminated)?;
+    // Parse comma-separated list of type paths (e.g., super::messages::Operation, MyType)
+    let types = attr.parse_args_with(Punctuated::<Path, Token![,]>::parse_terminated)?;
     Ok(types.into_iter().collect())
 }
 
@@ -209,6 +209,7 @@ fn extract_operation(attr: &Attribute) -> Option<OperationMeta> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use quote::quote;
     use syn::parse_quote;
 
     #[test]
@@ -335,9 +336,12 @@ mod tests {
 
         let meta = extract_asyncapi_spec_meta(&attrs);
         assert_eq!(meta.message_types.len(), 3);
-        assert_eq!(meta.message_types[0].to_string(), "ChatMessage");
-        assert_eq!(meta.message_types[1].to_string(), "UserMessage");
-        assert_eq!(meta.message_types[2].to_string(), "SystemMessage");
+        let path0 = &meta.message_types[0];
+        let path1 = &meta.message_types[1];
+        let path2 = &meta.message_types[2];
+        assert_eq!(quote!(#path0).to_string(), "ChatMessage");
+        assert_eq!(quote!(#path1).to_string(), "UserMessage");
+        assert_eq!(quote!(#path2).to_string(), "SystemMessage");
     }
 
     #[test]
@@ -348,6 +352,21 @@ mod tests {
 
         let meta = extract_asyncapi_spec_meta(&attrs);
         assert_eq!(meta.message_types.len(), 1);
-        assert_eq!(meta.message_types[0].to_string(), "ChatMessage");
+        let path0 = &meta.message_types[0];
+        assert_eq!(quote!(#path0).to_string(), "ChatMessage");
+    }
+
+    #[test]
+    fn test_extract_message_types_with_module_paths() {
+        let attrs: Vec<Attribute> = vec![parse_quote! {
+            #[asyncapi_messages(super::messages::Operation, crate::OperationResponse)]
+        }];
+
+        let meta = extract_asyncapi_spec_meta(&attrs);
+        assert_eq!(meta.message_types.len(), 2);
+        let path0 = &meta.message_types[0];
+        let path1 = &meta.message_types[1];
+        assert_eq!(quote!(#path0).to_string(), "super :: messages :: Operation");
+        assert_eq!(quote!(#path1).to_string(), "crate :: OperationResponse");
     }
 }
