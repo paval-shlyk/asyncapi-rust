@@ -14,11 +14,11 @@ body = """
     {% for commit in commits
         | filter(attribute="scope")
         | unique(attribute="message") %}
-        - **{{ commit.scope }}:** {{ commit.message | upper_first }}\
+        - **{{ commit.scope }}:** {{ commit.message | upper_first }}
     {% endfor %}
     {% for commit in commits %}
         {%- if not commit.scope -%}
-        - {{ commit.message | upper_first }}\
+        - {{ commit.message | upper_first }}
         {% endif -%}
     {% endfor %}
 {% endfor %}
@@ -32,9 +32,7 @@ body = """
 {% endif %}\n
 """
 trim = true
-footer = """
-**Full Changelog**: https://github.com/mlilback/asyncapi-rust/compare/{{ previous.version }}...{{ version }}
-"""
+footer = ""
 
 [git]
 # Parse conventional commits
