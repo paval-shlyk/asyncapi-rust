@@ -134,12 +134,23 @@ pub struct Info {
 /// # Example
 ///
 /// ```rust
-/// use asyncapi_rust_models::Server;
+/// use asyncapi_rust_models::{Server, ServerVariable};
+/// use std::collections::HashMap;
+///
+/// let mut variables = HashMap::new();
+/// variables.insert("userId".to_string(), ServerVariable {
+///     description: Some("User ID for connection".to_string()),
+///     default: None,
+///     enum_values: None,
+///     examples: Some(vec!["12".to_string(), "13".to_string()]),
+/// });
 ///
 /// let server = Server {
 ///     host: "chat.example.com:443".to_string(),
 ///     protocol: "wss".to_string(),
+///     pathname: Some("/api/ws/{userId}".to_string()),
 ///     description: Some("Production WebSocket server".to_string()),
+///     variables: Some(variables),
 /// };
 /// ```
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -156,11 +167,67 @@ pub struct Server {
     /// Common values: "ws" (WebSocket), "wss" (WebSocket Secure), "grpc", "mqtt"
     pub protocol: String,
 
+    /// Optional pathname for the server URL
+    ///
+    /// The pathname to append to the host. Can contain variables in curly braces (e.g., "/api/ws/{userId}")
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub pathname: Option<String>,
+
     /// Server description
     ///
     /// An optional human-readable description of the server's purpose or environment
     #[serde(skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
+
+    /// Server variables
+    ///
+    /// A map of variable name to ServerVariable definition for variables used in the pathname
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub variables: Option<HashMap<String, ServerVariable>>,
+}
+
+/// Server variable definition
+///
+/// Defines a variable that can be used in the server pathname. Variables are
+/// substituted at runtime with actual values.
+///
+/// # Example
+///
+/// ```rust
+/// use asyncapi_rust_models::ServerVariable;
+///
+/// let user_id_var = ServerVariable {
+///     description: Some("Authenticated user ID".to_string()),
+///     default: None,
+///     enum_values: None,
+///     examples: Some(vec!["12".to_string(), "13".to_string()]),
+/// };
+/// ```
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ServerVariable {
+    /// Variable description
+    ///
+    /// Human-readable description of what this variable represents
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
+
+    /// Default value
+    ///
+    /// The default value to use if no value is provided
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub default: Option<String>,
+
+    /// Enumeration of allowed values
+    ///
+    /// If specified, only these values are valid for this variable
+    #[serde(rename = "enum", skip_serializing_if = "Option::is_none")]
+    pub enum_values: Option<Vec<String>>,
+
+    /// Example values
+    ///
+    /// A list of example values for documentation purposes
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub examples: Option<Vec<String>>,
 }
 
 /// Communication channel
@@ -172,11 +239,33 @@ pub struct Server {
 /// # Example
 ///
 /// ```rust
-/// use asyncapi_rust_models::Channel;
+/// use asyncapi_rust_models::{Channel, Parameter, Schema, SchemaObject};
+/// use std::collections::HashMap;
+///
+/// let mut parameters = HashMap::new();
+/// parameters.insert("userId".to_string(), Parameter {
+///     description: Some("User ID for this WebSocket connection".to_string()),
+///     schema: Some(Schema::Object(Box::new(SchemaObject {
+///         schema_type: Some(serde_json::json!("integer")),
+///         properties: None,
+///         required: None,
+///         description: None,
+///         title: None,
+///         enum_values: None,
+///         const_value: None,
+///         items: None,
+///         additional_properties: None,
+///         one_of: None,
+///         any_of: None,
+///         all_of: None,
+///         additional: HashMap::new(),
+///     }))),
+/// });
 ///
 /// let channel = Channel {
-///     address: Some("/ws/chat".to_string()),
-///     messages: None, // Messages are typically added via operations
+///     address: Some("/ws/chat/{userId}".to_string()),
+///     messages: None,
+///     parameters: Some(parameters),
 /// };
 /// ```
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -195,6 +284,57 @@ pub struct Channel {
     /// Messages define the structure of data that flows through this channel.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub messages: Option<HashMap<String, MessageRef>>,
+
+    /// Channel parameters
+    ///
+    /// A map of parameter names to their schema definitions for variables used in the address
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub parameters: Option<HashMap<String, Parameter>>,
+}
+
+/// Channel parameter definition
+///
+/// Defines a parameter that can be used in the channel address. Parameters are
+/// substituted at runtime with actual values and have associated schema definitions.
+///
+/// # Example
+///
+/// ```rust
+/// use asyncapi_rust_models::{Parameter, Schema, SchemaObject};
+/// use std::collections::HashMap;
+///
+/// let user_id_param = Parameter {
+///     description: Some("User ID for this WebSocket connection".to_string()),
+///     schema: Some(Schema::Object(Box::new(SchemaObject {
+///         schema_type: Some(serde_json::json!("integer")),
+///         properties: None,
+///         required: None,
+///         description: None,
+///         title: None,
+///         enum_values: None,
+///         const_value: None,
+///         items: None,
+///         additional_properties: None,
+///         one_of: None,
+///         any_of: None,
+///         all_of: None,
+///         additional: HashMap::new(),
+///     }))),
+/// };
+/// ```
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Parameter {
+    /// Parameter description
+    ///
+    /// Human-readable description of what this parameter represents
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
+
+    /// Parameter schema
+    ///
+    /// The JSON Schema definition for this parameter's type and validation rules
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub schema: Option<Schema>,
 }
 
 /// Reference to a message definition

@@ -432,10 +432,66 @@ pub fn derive_asyncapi(input: TokenStream) -> TokenStream {
             let name = &server.name;
             let host = &server.host;
             let protocol = &server.protocol;
+            let pathname = if let Some(p) = &server.pathname {
+                quote! { Some(#p.to_string()) }
+            } else {
+                quote! { None }
+            };
             let desc = if let Some(d) = &server.description {
                 quote! { Some(#d.to_string()) }
             } else {
                 quote! { None }
+            };
+
+            // Generate server variables
+            let variables = if server.variables.is_empty() {
+                quote! { None }
+            } else {
+                let var_entries = server.variables.iter().map(|var| {
+                    let var_name = &var.name;
+                    let var_desc = if let Some(d) = &var.description {
+                        quote! { Some(#d.to_string()) }
+                    } else {
+                        quote! { None }
+                    };
+                    let var_default = if let Some(d) = &var.default {
+                        quote! { Some(#d.to_string()) }
+                    } else {
+                        quote! { None }
+                    };
+                    let var_enum = if var.enum_values.is_empty() {
+                        quote! { None }
+                    } else {
+                        let enum_vals = &var.enum_values;
+                        quote! { Some(vec![#(#enum_vals.to_string()),*]) }
+                    };
+                    let var_examples = if var.examples.is_empty() {
+                        quote! { None }
+                    } else {
+                        let examples = &var.examples;
+                        quote! { Some(vec![#(#examples.to_string()),*]) }
+                    };
+
+                    quote! {
+                        server_variables.insert(
+                            #var_name.to_string(),
+                            asyncapi_rust::ServerVariable {
+                                description: #var_desc,
+                                default: #var_default,
+                                enum_values: #var_enum,
+                                examples: #var_examples,
+                            }
+                        );
+                    }
+                });
+
+                quote! {
+                    {
+                        let mut server_variables = std::collections::HashMap::new();
+                        #(#var_entries)*
+                        Some(server_variables)
+                    }
+                }
             };
 
             quote! {
@@ -444,7 +500,9 @@ pub fn derive_asyncapi(input: TokenStream) -> TokenStream {
                     asyncapi_rust::Server {
                         host: #host.to_string(),
                         protocol: #protocol.to_string(),
+                        pathname: #pathname,
                         description: #desc,
+                        variables: #variables,
                     }
                 );
             }
@@ -471,12 +529,80 @@ pub fn derive_asyncapi(input: TokenStream) -> TokenStream {
                 quote! { None }
             };
 
+            // Generate channel parameters
+            let parameters = if channel.parameters.is_empty() {
+                quote! { None }
+            } else {
+                let param_entries = channel.parameters.iter().map(|param| {
+                    let param_name = &param.name;
+                    let param_desc = if let Some(d) = &param.description {
+                        quote! { Some(#d.to_string()) }
+                    } else {
+                        quote! { None }
+                    };
+
+                    // Build schema from schema_type and format
+                    let schema = if let Some(schema_type) = &param.schema_type {
+                        let format_field = if let Some(fmt) = &param.format {
+                            quote! {
+                                additional.insert("format".to_string(), serde_json::json!(#fmt));
+                            }
+                        } else {
+                            quote! {}
+                        };
+
+                        quote! {
+                            {
+                                let mut additional = std::collections::HashMap::new();
+                                #format_field
+                                Some(asyncapi_rust::Schema::Object(Box::new(asyncapi_rust::SchemaObject {
+                                    schema_type: Some(serde_json::json!(#schema_type)),
+                                    properties: None,
+                                    required: None,
+                                    description: None,
+                                    title: None,
+                                    enum_values: None,
+                                    const_value: None,
+                                    items: None,
+                                    additional_properties: None,
+                                    one_of: None,
+                                    any_of: None,
+                                    all_of: None,
+                                    additional,
+                                })))
+                            }
+                        }
+                    } else {
+                        quote! { None }
+                    };
+
+                    quote! {
+                        channel_parameters.insert(
+                            #param_name.to_string(),
+                            asyncapi_rust::Parameter {
+                                description: #param_desc,
+                                schema: #schema,
+                            }
+                        );
+                    }
+                });
+
+                quote! {
+                    {
+                        let mut channel_parameters = std::collections::HashMap::new();
+                        #(#param_entries)*
+                        Some(channel_parameters)
+                    }
+                }
+            };
+
             quote! {
                 channels.insert(
                     #name.to_string(),
                     asyncapi_rust::Channel {
                         address: #address,
                         messages: None,
+                        parameters: #parameters,
                     }
                 );
             }

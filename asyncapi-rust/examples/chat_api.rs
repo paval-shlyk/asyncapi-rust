@@ -130,7 +130,9 @@ fn build_asyncapi_spec(messages: Vec<Message>) -> AsyncApiSpec {
         Server {
             host: "api.example.com".to_string(),
             protocol: "wss".to_string(),
+            pathname: None,
             description: Some("Production WebSocket server".to_string()),
+            variables: None,
         },
     );
 
@@ -141,6 +143,7 @@ fn build_asyncapi_spec(messages: Vec<Message>) -> AsyncApiSpec {
         Channel {
             address: Some("/ws/chat".to_string()),
             messages: None, // Messages defined in components
+            parameters: None,
         },
     );
 

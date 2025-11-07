@@ -110,6 +110,52 @@ The `#[asyncapi_messages(...)]` attribute automatically populates the `component
 - Complete JSON schemas generated from Rust types
 - Message metadata (name, summary, description, content-type)
 
+### Server Variables and Channel Parameters
+
+Define dynamic server paths and channel parameters for WebSocket connections:
+
+```rust
+use asyncapi_rust::AsyncApi;
+
+#[derive(AsyncApi)]
+#[asyncapi(title = "User WebSocket API", version = "1.0.0")]
+#[asyncapi_server(
+    name = "production",
+    host = "api.enlightenhq.com",
+    protocol = "wss",
+    pathname = "/api/ws/{userId}",
+    variable(
+        name = "userId",
+        description = "Authenticated user ID",
+        examples = ["12", "13"]
+    )
+)]
+#[asyncapi_channel(
+    name = "rtMessaging",
+    address = "/api/ws/{userId}",
+    parameter(
+        name = "userId",
+        description = "User ID for this WebSocket connection",
+        schema_type = "integer",
+        format = "int64"
+    )
+)]
+struct UserApi;
+```
+
+**Server variables** define placeholders in server URLs with:
+- `name`: Variable name (required)
+- `description`: Human-readable description
+- `examples`: Example values for documentation
+- `default`: Default value if not provided
+- `enum_values`: Restricted set of allowed values
+
+**Channel parameters** define typed path parameters with:
+- `name`: Parameter name (required)
+- `description`: Human-readable description
+- `schema_type`: JSON Schema type (e.g., "integer", "string")
+- `format`: JSON Schema format (e.g., "int64", "uuid")
+
 ## Examples
 
 See working examples in the `examples/` directory:

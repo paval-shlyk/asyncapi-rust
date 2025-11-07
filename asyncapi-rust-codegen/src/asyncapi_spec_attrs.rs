@@ -20,7 +20,19 @@ pub struct ServerMeta {
     pub name: String,
     pub host: String,
     pub protocol: String,
+    pub pathname: Option<String>,
     pub description: Option<String>,
+    pub variables: Vec<ServerVariableMeta>,
+}
+
+/// Server variable metadata
+#[derive(Debug, Clone)]
+pub struct ServerVariableMeta {
+    pub name: String,
+    pub description: Option<String>,
+    pub default: Option<String>,
+    pub enum_values: Vec<String>,
+    pub examples: Vec<String>,
 }
 
 /// Channel metadata
@@ -30,6 +42,16 @@ pub struct ChannelMeta {
     pub address: Option<String>,
     #[allow(dead_code)] // Reserved for future use
     pub description: Option<String>,
+    pub parameters: Vec<ParameterMeta>,
+}
+
+/// Channel parameter metadata
+#[derive(Debug, Clone)]
+pub struct ParameterMeta {
+    pub name: String,
+    pub description: Option<String>,
+    pub schema_type: Option<String>,
+    pub format: Option<String>,
 }
 
 /// Operation metadata
@@ -106,7 +128,9 @@ fn extract_server(attr: &Attribute) -> Option<ServerMeta> {
     let mut name = None;
     let mut host = None;
     let mut protocol = None;
+    let mut pathname = None;
     let mut description = None;
+    let mut variables = Vec::new();
 
     let _ = attr.parse_nested_meta(|nested| {
         if nested.path.is_ident("name") {
@@ -121,10 +145,19 @@ fn extract_server(attr: &Attribute) -> Option<ServerMeta> {
             let value = nested.value()?;
             let s: syn::LitStr = value.parse()?;
             protocol = Some(s.value());
+        } else if nested.path.is_ident("pathname") {
+            let value = nested.value()?;
+            let s: syn::LitStr = value.parse()?;
+            pathname = Some(s.value());
         } else if nested.path.is_ident("description") {
             let value = nested.value()?;
             let s: syn::LitStr = value.parse()?;
             description = Some(s.value());
+        } else if nested.path.is_ident("variable") {
+            // Parse nested variable(...) attribute
+            if let Some(var) = extract_server_variable(&nested) {
+                variables.push(var);
+            }
         }
         Ok(())
     });
@@ -134,7 +167,59 @@ fn extract_server(attr: &Attribute) -> Option<ServerMeta> {
         name: name?,
         host: host?,
         protocol: protocol?,
+        pathname,
         description,
+        variables,
+    })
+}
+
+/// Extract server variable from nested meta (called from within parse_nested_meta)
+fn extract_server_variable(nested: &syn::meta::ParseNestedMeta) -> Option<ServerVariableMeta> {
+    let mut name = None;
+    let mut description = None;
+    let mut default = None;
+    let mut enum_values = Vec::new();
+    let mut examples = Vec::new();
+
+    let _ = nested.parse_nested_meta(|inner| {
+        if inner.path.is_ident("name") {
+            let value = inner.value()?;
+            let s: syn::LitStr = value.parse()?;
+            name = Some(s.value());
+        } else if inner.path.is_ident("description") {
+            let value = inner.value()?;
+            let s: syn::LitStr = value.parse()?;
+            description = Some(s.value());
+        } else if inner.path.is_ident("default") {
+            let value = inner.value()?;
+            let s: syn::LitStr = value.parse()?;
+            default = Some(s.value());
+        } else if inner.path.is_ident("enum_values") {
+            // Parse array of strings: enum_values = ["val1", "val2"]
+            let _ = inner.value()?; // Consume the equals sign
+            let content;
+            syn::bracketed!(content in inner.input);
+            let values: syn::punctuated::Punctuated<syn::LitStr, syn::Token![,]> =
+                content.parse_terminated(|stream| stream.parse(), syn::Token![,])?;
+            enum_values = values.iter().map(|lit| lit.value()).collect();
+        } else if inner.path.is_ident("examples") {
+            // Parse array of strings: examples = ["val1", "val2"]
+            let _ = inner.value()?; // Consume the equals sign
+            let content;
+            syn::bracketed!(content in inner.input);
+            let values: syn::punctuated::Punctuated<syn::LitStr, syn::Token![,]> =
+                content.parse_terminated(|stream| stream.parse(), syn::Token![,])?;
+            examples = values.iter().map(|lit| lit.value()).collect();
+        }
+        Ok(())
+    });
+
+    Some(ServerVariableMeta {
+        name: name?,
+        description,
+        default,
+        enum_values,
+        examples,
     })
 }
 
@@ -143,6 +228,7 @@ fn extract_channel(attr: &Attribute) -> Option<ChannelMeta> {
     let mut name = None;
     let mut address = None;
     let mut description = None;
+    let mut parameters = Vec::new();
 
     let _ = attr.parse_nested_meta(|nested| {
         if nested.path.is_ident("name") {
@@ -157,6 +243,11 @@ fn extract_channel(attr: &Attribute) -> Option<ChannelMeta> {
             let value = nested.value()?;
             let s: syn::LitStr = value.parse()?;
             description = Some(s.value());
+        } else if nested.path.is_ident("parameter") {
+            // Parse nested parameter(...) attribute
+            if let Some(param) = extract_channel_parameter(&nested) {
+                parameters.push(param);
+            }
         }
         Ok(())
     });
@@ -166,6 +257,43 @@ fn extract_channel(attr: &Attribute) -> Option<ChannelMeta> {
         name: name?,
         address,
         description,
+        parameters,
+    })
+}
+
+/// Extract channel parameter from nested meta (called from within parse_nested_meta)
+fn extract_channel_parameter(nested: &syn::meta::ParseNestedMeta) -> Option<ParameterMeta> {
+    let mut name = None;
+    let mut description = None;
+    let mut schema_type = None;
+    let mut format = None;
+
+    let _ = nested.parse_nested_meta(|inner| {
+        if inner.path.is_ident("name") {
+            let value = inner.value()?;
+            let s: syn::LitStr = value.parse()?;
+            name = Some(s.value());
+        } else if inner.path.is_ident("description") {
+            let value = inner.value()?;
+            let s: syn::LitStr = value.parse()?;
+            description = Some(s.value());
+        } else if inner.path.is_ident("schema_type") {
+            let value = inner.value()?;
+            let s: syn::LitStr = value.parse()?;
+            schema_type = Some(s.value());
+        } else if inner.path.is_ident("format") {
+            let value = inner.value()?;
+            let s: syn::LitStr = value.parse()?;
+            format = Some(s.value());
+        }
+        Ok(())
+    });
+
+    Some(ParameterMeta {
+        name: name?,
+        description,
+        schema_type,
+        format,
     })
 }
 
@@ -368,5 +496,111 @@ mod tests {
         let path1 = &meta.message_types[1];
         assert_eq!(quote!(#path0).to_string(), "super :: messages :: Operation");
         assert_eq!(quote!(#path1).to_string(), "crate :: OperationResponse");
+    }
+
+    #[test]
+    fn test_extract_server_with_variables() {
+        let attrs: Vec<Attribute> = vec![parse_quote! {
+            #[asyncapi_server(
+                name = "production",
+                host = "api.enlightenhq.com",
+                protocol = "wss",
+                pathname = "/api/ws/{userId}",
+                variable(name = "userId", description = "Authenticated user ID", examples = ["12", "13"])
+            )]
+        }];
+
+        let meta = extract_asyncapi_spec_meta(&attrs);
+        assert_eq!(meta.servers.len(), 1);
+        let server = &meta.servers[0];
+        assert_eq!(server.name, "production");
+        assert_eq!(server.host, "api.enlightenhq.com");
+        assert_eq!(server.protocol, "wss");
+        assert_eq!(server.pathname, Some("/api/ws/{userId}".to_string()));
+
+        assert_eq!(server.variables.len(), 1);
+        let var = &server.variables[0];
+        assert_eq!(var.name, "userId");
+        assert_eq!(var.description, Some("Authenticated user ID".to_string()));
+        assert_eq!(var.examples, vec!["12".to_string(), "13".to_string()]);
+    }
+
+    #[test]
+    fn test_extract_server_with_multiple_variables() {
+        let attrs: Vec<Attribute> = vec![parse_quote! {
+            #[asyncapi_server(
+                name = "staging",
+                host = "staging.example.com",
+                protocol = "wss",
+                pathname = "/api/{version}/ws/{userId}",
+                variable(name = "version", description = "API version", enum_values = ["v1", "v2"], default = "v2"),
+                variable(name = "userId", description = "User ID", examples = ["12", "13"])
+            )]
+        }];
+
+        let meta = extract_asyncapi_spec_meta(&attrs);
+        assert_eq!(meta.servers.len(), 1);
+        let server = &meta.servers[0];
+        assert_eq!(server.variables.len(), 2);
+
+        let var0 = &server.variables[0];
+        assert_eq!(var0.name, "version");
+        assert_eq!(var0.enum_values, vec!["v1".to_string(), "v2".to_string()]);
+        assert_eq!(var0.default, Some("v2".to_string()));
+
+        let var1 = &server.variables[1];
+        assert_eq!(var1.name, "userId");
+        assert_eq!(var1.examples, vec!["12".to_string(), "13".to_string()]);
+    }
+
+    #[test]
+    fn test_extract_channel_with_parameters() {
+        let attrs: Vec<Attribute> = vec![parse_quote! {
+            #[asyncapi_channel(
+                name = "rtMessaging",
+                address = "/api/ws/{userId}",
+                parameter(name = "userId", description = "User ID for this WebSocket connection", schema_type = "integer", format = "int64")
+            )]
+        }];
+
+        let meta = extract_asyncapi_spec_meta(&attrs);
+        assert_eq!(meta.channels.len(), 1);
+        let channel = &meta.channels[0];
+        assert_eq!(channel.name, "rtMessaging");
+        assert_eq!(channel.address, Some("/api/ws/{userId}".to_string()));
+
+        assert_eq!(channel.parameters.len(), 1);
+        let param = &channel.parameters[0];
+        assert_eq!(param.name, "userId");
+        assert_eq!(param.description, Some("User ID for this WebSocket connection".to_string()));
+        assert_eq!(param.schema_type, Some("integer".to_string()));
+        assert_eq!(param.format, Some("int64".to_string()));
+    }
+
+    #[test]
+    fn test_extract_channel_with_multiple_parameters() {
+        let attrs: Vec<Attribute> = vec![parse_quote! {
+            #[asyncapi_channel(
+                name = "userChannel",
+                address = "/api/{version}/ws/{userId}",
+                parameter(name = "version", description = "API version", schema_type = "string"),
+                parameter(name = "userId", description = "User ID", schema_type = "integer", format = "int64")
+            )]
+        }];
+
+        let meta = extract_asyncapi_spec_meta(&attrs);
+        assert_eq!(meta.channels.len(), 1);
+        let channel = &meta.channels[0];
+        assert_eq!(channel.parameters.len(), 2);
+
+        let param0 = &channel.parameters[0];
+        assert_eq!(param0.name, "version");
+        assert_eq!(param0.schema_type, Some("string".to_string()));
+        assert_eq!(param0.format, None);
+
+        let param1 = &channel.parameters[1];
+        assert_eq!(param1.name, "userId");
+        assert_eq!(param1.schema_type, Some("integer".to_string()));
+        assert_eq!(param1.format, Some("int64".to_string()));
     }
 }
