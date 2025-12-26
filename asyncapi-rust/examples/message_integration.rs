@@ -59,7 +59,8 @@ pub enum SystemMessage {
 ///
 /// The #[asyncapi_messages(...)] attribute automatically includes
 /// message definitions from the specified types in the components section.
-/// The messages parameter in operations specifies which messages can be used.
+/// The messages parameter in operations specifies which messages can be used,
+/// and these messages are automatically added to the channel that the operation references.
 #[allow(clippy::duplicated_attributes)]
 #[derive(AsyncApi)]
 #[asyncapi(
@@ -107,6 +108,14 @@ fn main() {
         for (name, channel) in channels {
             if let Some(address) = &channel.address {
                 println!("  - {}: {}", name, address);
+            }
+            if let Some(messages) = &channel.messages {
+                println!("    Channel Messages:");
+                for (msg_name, msg_ref) in messages {
+                    if let asyncapi_rust::MessageRef::Reference { reference } = msg_ref {
+                        println!("      - {}: {}", msg_name, reference);
+                    }
+                }
             }
         }
         println!();

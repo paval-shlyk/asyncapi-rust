@@ -136,6 +136,10 @@
 //! - `channel = "..."` - Channel reference (required)
 //! - `messages = [Type1, Type2, ...]` - Message types available for this operation (optional)
 //!
+//! When the `messages` parameter is specified on operations, those messages are automatically
+//! added to the channel that the operation references. This ensures that the channel's `messages`
+//! field includes all messages used by operations on that channel.
+//!
 //! ## Integration with serde
 //!
 //! The macros respect serde attributes for naming and structure:
@@ -660,12 +664,50 @@ pub fn derive_asyncapi(input: TokenStream) -> TokenStream {
                 }
             };
 
+            // Collect messages from all operations that reference this channel
+            let channel_name_str = name.as_str();
+            let operations_for_channel: Vec<_> = spec_meta.operations.iter()
+                .filter(|op| op.channel == channel_name_str)
+                .collect();
+
+            let messages_field = if operations_for_channel.is_empty() ||
+                                   operations_for_channel.iter().all(|op| op.messages.is_empty()) {
+                quote! { None }
+            } else {
+                let message_calls: Vec<_> = operations_for_channel.iter()
+                    .flat_map(|op| &op.messages)
+                    .collect::<std::collections::HashSet<_>>() // Deduplicate
+                    .into_iter()
+                    .map(|type_name| {
+                        quote! {
+                            // Call asyncapi_message_names() for this type and add references
+                            for msg_name in #type_name::asyncapi_message_names() {
+                                channel_messages.insert(
+                                    msg_name.to_string(),
+                                    asyncapi_rust::MessageRef::Reference {
+                                        reference: format!("#/components/messages/{}", msg_name),
+                                    }
+                                );
+                            }
+                        }
+                    })
+                    .collect();
+
+                quote! {
+                    {
+                        let mut channel_messages = std::collections::HashMap::new();
+                        #(#message_calls)*
+                        Some(channel_messages)
+                    }
+                }
+            };
+
             quote! {
                 channels.insert(
                     #name.to_string(),
                     asyncapi_rust::Channel {
                         address: #address,
-                        messages: None,
+                        messages: #messages_field,
                         parameters: #parameters,
                     }
                 );

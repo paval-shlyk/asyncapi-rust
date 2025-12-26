@@ -470,4 +470,18 @@ fn test_asyncapi_operation_with_messages() {
         }
         _ => panic!("Expected message reference"),
     }
+
+    // Verify channels exist and have messages
+    let channels = spec.channels.expect("Should have channels");
+    assert_eq!(channels.len(), 1);
+
+    let chat_channel = channels.get("chat").expect("Should have chat channel");
+    assert!(chat_channel.messages.is_some());
+    let channel_messages = chat_channel.messages.as_ref().unwrap();
+    assert_eq!(channel_messages.len(), 3); // All unique messages from both operations
+
+    // Verify channel messages include all messages from operations
+    assert!(channel_messages.contains_key("user.join"));
+    assert!(channel_messages.contains_key("chat.message"));
+    assert!(channel_messages.contains_key("system.status"));
 }

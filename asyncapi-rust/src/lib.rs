@@ -77,7 +77,11 @@
 //! - `#[asyncapi(...)]` - Basic info (title, version, description)
 //! - `#[asyncapi_server(...)]` - Server definitions
 //! - `#[asyncapi_channel(...)]` - Channel definitions
-//! - `#[asyncapi_operation(...)]` - Operation definitions
+//! - `#[asyncapi_operation(...)]` - Operation definitions (with optional `messages` parameter)
+//! - `#[asyncapi_messages(...)]` - Include message types in components
+//!
+//! When you specify messages in operations, they are automatically added to the channel
+//! that the operation references, ensuring proper AsyncAPI 3.0 structure.
 //!
 //! ## Framework Integration
 //!
