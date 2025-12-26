@@ -328,7 +328,7 @@ fn extract_operation(attr: &Attribute) -> Option<OperationMeta> {
             description = Some(s.value());
         } else if nested.path.is_ident("messages") {
             // Parse array of type paths: messages = [Type1, Type2, ...]
-            let _ = nested.value()?; // Consume the equals sign
+            let _ = nested.value()?; // Parse the equals sign and prepare for value parsing
             let content;
             syn::bracketed!(content in nested.input);
             let types: Punctuated<Path, Token![,]> =
