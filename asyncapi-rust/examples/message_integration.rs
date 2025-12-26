@@ -59,6 +59,7 @@ pub enum SystemMessage {
 ///
 /// The #[asyncapi_messages(...)] attribute automatically includes
 /// message definitions from the specified types in the components section.
+/// The messages parameter in operations specifies which messages can be used.
 #[allow(clippy::duplicated_attributes)]
 #[derive(AsyncApi)]
 #[asyncapi(
@@ -73,8 +74,8 @@ pub enum SystemMessage {
     description = "Production WebSocket server"
 )]
 #[asyncapi_channel(name = "chat", address = "/ws/chat")]
-#[asyncapi_operation(name = "sendMessage", action = "send", channel = "chat")]
-#[asyncapi_operation(name = "receiveMessage", action = "receive", channel = "chat")]
+#[asyncapi_operation(name = "sendMessage", action = "send", channel = "chat", messages = [ChatMessage])]
+#[asyncapi_operation(name = "receiveMessage", action = "receive", channel = "chat", messages = [ChatMessage, SystemMessage])]
 #[asyncapi_messages(ChatMessage, SystemMessage)]
 struct ChatApi;
 
@@ -123,6 +124,14 @@ fn main() {
                 "  - {}: {} to {}",
                 name, action, operation.channel.reference
             );
+            if let Some(messages) = &operation.messages {
+                println!("    Messages:");
+                for msg in messages {
+                    if let asyncapi_rust::MessageRef::Reference { reference } = msg {
+                        println!("      - {}", reference);
+                    }
+                }
+            }
         }
         println!();
     }

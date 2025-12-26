@@ -699,6 +699,30 @@ pub fn derive_asyncapi(input: TokenStream) -> TokenStream {
                 .to_compile_error();
             };
 
+            // Generate messages references if any messages are specified
+            let messages_field = if operation.messages.is_empty() {
+                quote! { None }
+            } else {
+                let message_calls = operation.messages.iter().map(|type_name| {
+                    quote! {
+                        // Call asyncapi_message_names() for this type and add references
+                        for msg_name in #type_name::asyncapi_message_names() {
+                            message_refs.push(asyncapi_rust::MessageRef::Reference {
+                                reference: format!("#/components/messages/{}", msg_name),
+                            });
+                        }
+                    }
+                });
+
+                quote! {
+                    {
+                        let mut message_refs = Vec::new();
+                        #(#message_calls)*
+                        Some(message_refs)
+                    }
+                }
+            };
+
             quote! {
                 operations.insert(
                     #name.to_string(),
@@ -707,7 +731,7 @@ pub fn derive_asyncapi(input: TokenStream) -> TokenStream {
                         channel: asyncapi_rust::ChannelRef {
                             reference: format!("#/channels/{}", #channel_ref),
                         },
-                        messages: None,
+                        messages: #messages_field,
                     }
                 );
             }
