@@ -81,7 +81,9 @@
 //! - `#[asyncapi_messages(...)]` - Include message types in components
 //!
 //! When you specify messages in operations, they are automatically added to the channel
-//! that the operation references, ensuring proper AsyncAPI 3.0 structure.
+//! that the operation references. Operations reference channel messages
+//! (`#/channels/{channel}/messages/{message}`), while channels reference components
+//! (`#/components/messages/{message}`), following AsyncAPI 3.0 specification.
 //!
 //! ## Framework Integration
 //!

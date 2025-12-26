@@ -61,6 +61,10 @@ pub enum SystemMessage {
 /// message definitions from the specified types in the components section.
 /// The messages parameter in operations specifies which messages can be used,
 /// and these messages are automatically added to the channel that the operation references.
+///
+/// Per AsyncAPI 3.0 spec:
+/// - Operations reference channel messages: #/channels/{channel}/messages/{message}
+/// - Channels reference component messages: #/components/messages/{message}
 #[allow(clippy::duplicated_attributes)]
 #[derive(AsyncApi)]
 #[asyncapi(

@@ -137,8 +137,9 @@
 //! - `messages = [Type1, Type2, ...]` - Message types available for this operation (optional)
 //!
 //! When the `messages` parameter is specified on operations, those messages are automatically
-//! added to the channel that the operation references. This ensures that the channel's `messages`
-//! field includes all messages used by operations on that channel.
+//! added to the channel that the operation references. Operation messages reference the channel's
+//! messages (e.g., `#/channels/{channel}/messages/{message}`), while channel messages reference
+//! the components section (e.g., `#/components/messages/{message}`), following AsyncAPI 3.0 spec.
 //!
 //! ## Integration with serde
 //!
@@ -751,10 +752,10 @@ pub fn derive_asyncapi(input: TokenStream) -> TokenStream {
             } else {
                 let message_calls = operation.messages.iter().map(|type_name| {
                     quote! {
-                        // Call asyncapi_message_names() for this type and add references
+                        // Call asyncapi_message_names() for this type and add references to channel messages
                         for msg_name in #type_name::asyncapi_message_names() {
                             message_refs.push(asyncapi_rust::MessageRef::Reference {
-                                reference: format!("#/components/messages/{}", msg_name),
+                                reference: format!("#/channels/{}/messages/{}", #channel_ref, msg_name),
                             });
                         }
                     }
