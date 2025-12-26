@@ -219,7 +219,7 @@ pub fn derive_to_asyncapi_message(input: TokenStream) -> TokenStream {
     }
 
     // Parse enum variants or struct
-    let messages = match &input.data {
+    let (messages, _is_enum) = match &input.data {
         Data::Enum(data_enum) => {
             let mut message_metas = Vec::new();
 
@@ -243,20 +243,23 @@ pub fn derive_to_asyncapi_message(input: TokenStream) -> TokenStream {
                 });
             }
 
-            message_metas
+            (message_metas, true)
         }
         Data::Struct(_) => {
             // For structs, extract metadata from the struct itself
             let asyncapi_meta = extract_asyncapi_meta(&input.attrs);
 
-            vec![MessageMeta {
-                name: name.to_string(),
-                summary: asyncapi_meta.summary,
-                description: asyncapi_meta.description,
-                title: asyncapi_meta.title,
-                content_type: asyncapi_meta.content_type,
-                triggers_binary: asyncapi_meta.triggers_binary,
-            }]
+            (
+                vec![MessageMeta {
+                    name: name.to_string(),
+                    summary: asyncapi_meta.summary,
+                    description: asyncapi_meta.description,
+                    title: asyncapi_meta.title,
+                    content_type: asyncapi_meta.content_type,
+                    triggers_binary: asyncapi_meta.triggers_binary,
+                }],
+                false,
+            )
         }
         Data::Union(_) => {
             return syn::Error::new_spanned(name, "ToAsyncApiMessage cannot be derived for unions")
@@ -338,22 +341,79 @@ pub fn derive_to_asyncapi_message(input: TokenStream) -> TokenStream {
 
                 let schema = schema_for!(Self);
 
-                // Convert schemars RootSchema to our Schema type
+                // Convert schemars RootSchema to JSON
                 let schema_json = serde_json::to_value(&schema)
                     .expect("Failed to serialize schema");
 
-                let payload_schema: asyncapi_rust::Schema = serde_json::from_value(schema_json)
-                    .expect("Failed to deserialize schema");
+                // For enums, extract individual variant schemas from oneOf
+                let variant_schemas = if let Some(one_of_array) = schema_json.get("oneOf") {
+                    if let Some(variants) = one_of_array.as_array() {
+                        // Create a map of variant name to its schema with capacity
+                        let mut variant_map = std::collections::HashMap::with_capacity(variants.len());
+
+                        for variant in variants {
+                            // Extract the const value from the type field
+                            if let Some(properties) = variant.get("properties") {
+                                if let Some(type_prop) = properties.get("type") {
+                                    if let Some(const_val) = type_prop.get("const") {
+                                        if let Some(variant_name) = const_val.as_str() {
+                                            // Convert this variant to a Schema
+                                            // Note: clone is necessary here because we need ownership
+                                            // of the JSON value to deserialize it
+                                            let variant_schema: asyncapi_rust::Schema =
+                                                serde_json::from_value(variant.clone())
+                                                    .unwrap_or_else(|e| panic!(
+                                                        "Failed to deserialize schema for variant '{}': {}",
+                                                        variant_name, e
+                                                    ));
+                                            variant_map.insert(variant_name.to_string(), variant_schema);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        Some(variant_map)
+                    } else {
+                        None
+                    }
+                } else {
+                    None
+                };
 
                 // Create messages with metadata
-                vec![#(asyncapi_rust::Message {
-                    name: Some(#message_names_for_gen.to_string()),
-                    title: #message_titles,
-                    summary: #message_summaries,
-                    description: #message_descriptions,
-                    content_type: #message_content_types,
-                    payload: Some(payload_schema.clone()),
-                }),*]
+                let message_names = vec![#(#message_names_for_gen),*];
+                let message_titles = vec![#(#message_titles),*];
+                let message_summaries = vec![#(#message_summaries),*];
+                let message_descriptions = vec![#(#message_descriptions),*];
+                let message_content_types = vec![#(#message_content_types),*];
+
+                let mut messages = Vec::new();
+                for i in 0..message_names.len() {
+                    let msg_name = message_names[i];
+
+                    // For enums, try to find the specific variant schema
+                    let msg_payload = if let Some(ref variant_schemas) = variant_schemas {
+                        // Try to get the specific variant schema for this message
+                        variant_schemas.get(msg_name).cloned()
+                    } else {
+                        // For structs, deserialize and use the full schema
+                        let payload_schema: asyncapi_rust::Schema = serde_json::from_value(schema_json.clone())
+                            .expect("Failed to deserialize schema");
+                        Some(payload_schema)
+                    };
+
+                    messages.push(asyncapi_rust::Message {
+                        name: Some(msg_name.to_string()),
+                        title: message_titles[i].clone(),
+                        summary: message_summaries[i].clone(),
+                        description: message_descriptions[i].clone(),
+                        content_type: message_content_types[i].clone(),
+                        payload: msg_payload,
+                    });
+                }
+
+                messages
             }
         }
     };
