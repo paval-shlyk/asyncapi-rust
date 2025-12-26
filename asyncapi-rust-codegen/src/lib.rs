@@ -348,8 +348,8 @@ pub fn derive_to_asyncapi_message(input: TokenStream) -> TokenStream {
                 // For enums, extract individual variant schemas from oneOf
                 let variant_schemas = if let Some(one_of_array) = schema_json.get("oneOf") {
                     if let Some(variants) = one_of_array.as_array() {
-                        // Create a map of variant name to its schema
-                        let mut variant_map = std::collections::HashMap::new();
+                        // Create a map of variant name to its schema with capacity
+                        let mut variant_map = std::collections::HashMap::with_capacity(variants.len());
 
                         for variant in variants {
                             // Extract the const value from the type field
@@ -358,6 +358,8 @@ pub fn derive_to_asyncapi_message(input: TokenStream) -> TokenStream {
                                     if let Some(const_val) = type_prop.get("const") {
                                         if let Some(variant_name) = const_val.as_str() {
                                             // Convert this variant to a Schema
+                                            // Note: clone is necessary here because we need ownership
+                                            // of the JSON value to deserialize it
                                             let variant_schema: asyncapi_rust::Schema =
                                                 serde_json::from_value(variant.clone())
                                                     .unwrap_or_else(|e| panic!(
