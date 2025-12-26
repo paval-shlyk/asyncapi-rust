@@ -125,6 +125,45 @@ fn test_enum_schema_generation() {
     // Both should have schemas
     assert!(messages[0].payload.is_some());
     assert!(messages[1].payload.is_some());
+
+    // Verify that each message has ONLY its specific variant schema (no oneOf)
+    // Convert to JSON to inspect the structure
+    let echo_payload_json = serde_json::to_value(&messages[0].payload).unwrap();
+    let broadcast_payload_json = serde_json::to_value(&messages[1].payload).unwrap();
+
+    // Echo message should NOT have oneOf at the top level
+    assert!(
+        echo_payload_json.get("oneOf").is_none(),
+        "Echo message should not have oneOf in its schema"
+    );
+
+    // Broadcast message should NOT have oneOf at the top level
+    assert!(
+        broadcast_payload_json.get("oneOf").is_none(),
+        "Broadcast message should not have oneOf in its schema"
+    );
+
+    // Echo message should have the const value "Echo" in its type property
+    if let Some(properties) = echo_payload_json.get("properties") {
+        if let Some(type_prop) = properties.get("type") {
+            assert_eq!(
+                type_prop.get("const"),
+                Some(&serde_json::json!("Echo")),
+                "Echo message should have const 'Echo' in type property"
+            );
+        }
+    }
+
+    // Broadcast message should have the const value "Broadcast" in its type property
+    if let Some(properties) = broadcast_payload_json.get("properties") {
+        if let Some(type_prop) = properties.get("type") {
+            assert_eq!(
+                type_prop.get("const"),
+                Some(&serde_json::json!("Broadcast")),
+                "Broadcast message should have const 'Broadcast' in type property"
+            );
+        }
+    }
 }
 
 #[test]
