@@ -42,8 +42,9 @@
 //! #[asyncapi(title = "Chat API", version = "1.0.0")]
 //! #[asyncapi_server(name = "production", host = "api.example.com", protocol = "wss")]
 //! #[asyncapi_channel(name = "chat", address = "/ws/chat")]
-//! #[asyncapi_operation(name = "sendMessage", action = "send", channel = "chat")]
-//! #[asyncapi_operation(name = "receiveMessage", action = "receive", channel = "chat")]
+//! #[asyncapi_operation(name = "sendMessage", action = "send", channel = "chat", messages = [ChatMessage])]
+//! #[asyncapi_operation(name = "receiveMessage", action = "receive", channel = "chat", messages = [ChatMessage])]
+//! #[asyncapi_messages(ChatMessage)]
 //! struct ChatApi;
 //!
 //! fn main() {

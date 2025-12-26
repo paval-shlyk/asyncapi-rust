@@ -75,13 +75,16 @@
 //! #[asyncapi_operation(
 //!     name = "sendMessage",
 //!     action = "send",
-//!     channel = "chat"
+//!     channel = "chat",
+//!     messages = [ChatMessage]
 //! )]
 //! #[asyncapi_operation(
 //!     name = "receiveMessage",
 //!     action = "receive",
-//!     channel = "chat"
+//!     channel = "chat",
+//!     messages = [ChatMessage, SystemMessage]
 //! )]
+//! #[asyncapi_messages(ChatMessage, SystemMessage)]
 //! struct ChatApi;
 //!
 //! // Generated method:
@@ -131,6 +134,7 @@
 //! - `name = "..."` - Operation identifier (required)
 //! - `action = "send"|"receive"` - Operation type (required)
 //! - `channel = "..."` - Channel reference (required)
+//! - `messages = [Type1, Type2, ...]` - Message types available for this operation (optional)
 //!
 //! ## Integration with serde
 //!
