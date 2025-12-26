@@ -341,12 +341,9 @@ pub fn derive_to_asyncapi_message(input: TokenStream) -> TokenStream {
 
                 let schema = schema_for!(Self);
 
-                // Convert schemars RootSchema to our Schema type
+                // Convert schemars RootSchema to JSON
                 let schema_json = serde_json::to_value(&schema)
                     .expect("Failed to serialize schema");
-
-                let payload_schema: asyncapi_rust::Schema = serde_json::from_value(schema_json.clone())
-                    .expect("Failed to deserialize schema");
 
                 // For enums, extract individual variant schemas from oneOf
                 let variant_schemas = if let Some(one_of_array) = schema_json.get("oneOf") {
@@ -363,7 +360,10 @@ pub fn derive_to_asyncapi_message(input: TokenStream) -> TokenStream {
                                             // Convert this variant to a Schema
                                             let variant_schema: asyncapi_rust::Schema =
                                                 serde_json::from_value(variant.clone())
-                                                    .expect("Failed to deserialize variant schema");
+                                                    .unwrap_or_else(|e| panic!(
+                                                        "Failed to deserialize schema for variant '{}': {}",
+                                                        variant_name, e
+                                                    ));
                                             variant_map.insert(variant_name.to_string(), variant_schema);
                                         }
                                     }
@@ -395,8 +395,10 @@ pub fn derive_to_asyncapi_message(input: TokenStream) -> TokenStream {
                         // Try to get the specific variant schema for this message
                         variant_schemas.get(msg_name).cloned()
                     } else {
-                        // For structs, use the full schema
-                        Some(payload_schema.clone())
+                        // For structs, deserialize and use the full schema
+                        let payload_schema: asyncapi_rust::Schema = serde_json::from_value(schema_json.clone())
+                            .expect("Failed to deserialize schema");
+                        Some(payload_schema)
                     };
 
                     messages.push(asyncapi_rust::Message {

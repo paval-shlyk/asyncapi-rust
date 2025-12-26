@@ -118,18 +118,25 @@ fn test_enum_schema_generation() {
     let messages = TaggedMessage::asyncapi_messages();
     assert_eq!(messages.len(), 2);
 
-    // Each variant should have its own message
-    assert_eq!(messages[0].name, Some("Echo".to_string()));
-    assert_eq!(messages[1].name, Some("Broadcast".to_string()));
+    // Find messages by name (more maintainable than hard-coded indices)
+    let echo_msg = messages
+        .iter()
+        .find(|m| m.name.as_ref().is_some_and(|n| n == "Echo"))
+        .expect("Echo message should exist");
+
+    let broadcast_msg = messages
+        .iter()
+        .find(|m| m.name.as_ref().is_some_and(|n| n == "Broadcast"))
+        .expect("Broadcast message should exist");
 
     // Both should have schemas
-    assert!(messages[0].payload.is_some());
-    assert!(messages[1].payload.is_some());
+    assert!(echo_msg.payload.is_some());
+    assert!(broadcast_msg.payload.is_some());
 
     // Verify that each message has ONLY its specific variant schema (no oneOf)
     // Convert to JSON to inspect the structure
-    let echo_payload_json = serde_json::to_value(&messages[0].payload).unwrap();
-    let broadcast_payload_json = serde_json::to_value(&messages[1].payload).unwrap();
+    let echo_payload_json = serde_json::to_value(&echo_msg.payload).unwrap();
+    let broadcast_payload_json = serde_json::to_value(&broadcast_msg.payload).unwrap();
 
     // Echo message should NOT have oneOf at the top level
     assert!(
